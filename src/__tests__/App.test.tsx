@@ -3,6 +3,9 @@ import { render, screen } from '@testing-library/react';
 import App from '../App.tsx';
 
 // Mock the 3D canvas component since it requires WebGL
+vi.mock('../components/Viewport', () => ({
+  Viewport: () => <div data-testid="bike-canvas">Viewport Mock</div>,
+}));
 vi.mock('../components/BikeCanvas', () => ({
   BikeCanvas: () => <div data-testid="bike-canvas">BikeCanvas Mock</div>,
 }));

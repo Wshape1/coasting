@@ -67,7 +67,7 @@ function MeasurementSlider({
 }
 
 function ControlsContent() {
-  const { height, inseam, armLength, bikeType, pose, setMeasurements, setBikeType, setPose } =
+  const { height, inseam, weight, bikeType, pose, setMeasurements, setBikeType, setPose } =
     useBikeStore();
 
   return (
@@ -88,7 +88,7 @@ function ControlsContent() {
           min={150}
           max={200}
           unit="cm"
-          onChange={(v) => setMeasurements(v, inseam, armLength)}
+          onChange={(v) => setMeasurements(v, weight, inseam)}
         />
         <MeasurementSlider
           label="Inseam"
@@ -96,15 +96,15 @@ function ControlsContent() {
           min={65}
           max={95}
           unit="cm"
-          onChange={(v) => setMeasurements(height, v, armLength)}
+          onChange={(v) => setMeasurements(height, v, inseam)}
         />
         <MeasurementSlider
-          label="Arm Length"
-          value={armLength}
-          min={50}
-          max={70}
-          unit="cm"
-          onChange={(v) => setMeasurements(height, inseam, v)}
+          label="Weight"
+          value={weight}
+          min={40}
+          max={120}
+          unit="kg"
+          onChange={(v) => setMeasurements(height, v, inseam)}
         />
       </div>
 
@@ -121,6 +121,7 @@ function ControlsContent() {
           <SelectContent>
             <SelectItem value="road">Road</SelectItem>
             <SelectItem value="mountain">Mountain</SelectItem>
+            <SelectItem value="urban">Urban</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -133,8 +134,10 @@ function ControlsContent() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="static">Static</SelectItem>
-            <SelectItem value="riding">Riding</SelectItem>
+            <SelectItem value="seated">Seated</SelectItem>
+            <SelectItem value="sprint">Sprint</SelectItem>
+            <SelectItem value="climbing">Climbing</SelectItem>
+            <SelectItem value="aero">Aero</SelectItem>
           </SelectContent>
         </Select>
       </div>

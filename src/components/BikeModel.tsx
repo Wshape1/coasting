@@ -75,9 +75,9 @@ function Tube({
 export function BikeModel() {
   const { bikeType } = useBikeStore();
 
-  const frameColor = bikeType === 'road' ? '#ef4444' : '#22c55e';
-  const wheelBase = bikeType === 'road' ? 0.98 : 1.05;
-  const seatHeight = bikeType === 'road' ? 0.7 : 0.65;
+  const frameColor = bikeType === 'road' ? '#D4A04A' : bikeType === 'mountain' ? '#22c55e' : '#3b82f6';
+  const wheelBase = bikeType === 'road' ? 0.98 : bikeType === 'mountain' ? 1.05 : 0.95;
+  const seatHeight = bikeType === 'road' ? 0.7 : bikeType === 'mountain' ? 0.65 : 0.68;
 
   const wheelRadius = 0.35;
   const bbHeight = 0.28; // bottom bracket height

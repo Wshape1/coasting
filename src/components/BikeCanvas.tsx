@@ -9,7 +9,7 @@ export function BikeCanvas() {
   const isMobile = useMediaQuery('(max-width: 767px)');
 
   return (
-    <div className="w-full" style={{ aspectRatio: '16/10', maxHeight: '80vh' }}>
+    <div className="absolute inset-0">
       <Canvas
         camera={{
           position: [3, 2, 4],

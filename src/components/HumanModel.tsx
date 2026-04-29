@@ -20,12 +20,12 @@ function BodyPart({
 }
 
 export function HumanModel() {
-  const { height, inseam, armLength } = useBikeStore();
+  const { height, inseam } = useBikeStore();
 
   // Normalize measurements: height in cm → 3D units (1 unit = 1 meter)
   const h = height / 100;
   const legRatio = inseam / height;
-  const armRatio = armLength / height;
+  const armRatio = 0.35; // default arm ratio
 
   // Derived proportions
   const legLen = h * legRatio;
