@@ -1,0 +1,2 @@
+allowBuilds:
+  pngquant-bin: set this to true or false
