@@ -40,8 +40,11 @@ export function Viewport() {
         </div>
 
         {/* Rotate button - bottom right */}
-        <button className="absolute bottom-4 right-4 flex h-10 w-10 items-center justify-center rounded-2xl bg-white/60 text-lg shadow-lg ring-1 ring-black/5 backdrop-blur-md transition-transform hover:scale-105 active:scale-95">
-          🔄
+        <button
+          aria-label="旋转视角"
+          className="absolute bottom-4 right-4 flex h-10 w-10 items-center justify-center rounded-2xl bg-white/60 text-lg shadow-lg ring-1 ring-black/5 backdrop-blur-md transition-transform hover:scale-105 active:scale-95"
+        >
+          <span aria-hidden="true">🔄</span>
         </button>
       </div>
     </div>

@@ -35,13 +35,40 @@ const fallbackData: Record<string, AIRecommendation> = {
   },
 };
 
+function Skeleton({ className }: { className?: string }) {
+  return (
+    <div
+      className={`animate-pulse rounded-lg bg-black/5 ${className ?? ''}`}
+    />
+  );
+}
+
+function LoadingSkeleton() {
+  return (
+    <div className="space-y-3 rounded-2xl bg-white/70 p-5 shadow-lg ring-1 ring-black/5 backdrop-blur-xl">
+      <div className="flex items-center gap-2">
+        <Skeleton className="h-6 w-6 rounded-lg" />
+        <Skeleton className="h-4 w-16" />
+      </div>
+      <div className="h-px bg-black/5" />
+      <div className="space-y-2">
+        <Skeleton className="h-3 w-full" />
+        <Skeleton className="h-3 w-4/5" />
+        <Skeleton className="h-3 w-3/5" />
+      </div>
+      <Skeleton className="h-8 w-28 rounded-lg" />
+    </div>
+  );
+}
+
 export function AIRecommendationCard() {
   const { height, inseam, weight, bikeType, pose } = useBikeStore();
 
-  const { data, isLoading, error } = useQuery<AIRecommendation>({
+  const { isLoading, error } = useQuery<AIRecommendation>({
     queryKey: ['aiRecommendation', { height, inseam, weight, bikeType, pose }],
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       const res = await fetch('/api/ai/recommend', {
+        signal,
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ height, inseam, weight, bikeType, pose }),
@@ -53,12 +80,15 @@ export function AIRecommendationCard() {
     retry: 1,
   });
 
-  const fallback = fallbackData[pose] ?? fallbackData.seated;
-  const displayData = data ?? fallback;
+  const displayData = (fallbackData[pose] ?? fallbackData.seated)!;
+
+  if (isLoading) return <LoadingSkeleton />;
+
+  const poseLabel =
+    pose === 'seated' ? '坐姿' : pose === 'sprint' ? '冲刺' : pose === 'climbing' ? '爬坡' : '低风阻';
 
   return (
     <div className="space-y-3 rounded-2xl bg-white/70 p-5 shadow-lg ring-1 ring-black/5 backdrop-blur-xl">
-      {/* Header */}
       <div className="flex items-center gap-2">
         <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary text-[10px] font-bold text-primary-foreground">
           AI
@@ -70,29 +100,27 @@ export function AIRecommendationCard() {
 
       <div className="h-px bg-black/5" />
 
-      {isLoading ? (
-        <p className="text-sm text-muted-foreground">分析中...</p>
-      ) : error ? (
+      {error ? (
         <div>
           <p className="text-sm leading-relaxed text-muted-foreground">
-            根据你的{pose === 'seated' ? '坐姿' : pose === 'sprint' ? '冲刺' : pose === 'climbing' ? '爬坡' : '低风阻'}
-            姿态和身高 {height}cm{weight ? `，体重 ${weight}kg` : ''}，推荐 {displayData!.size}
+            根据你的{poseLabel}姿态和身高 {height}cm
+            {weight ? `，体重 ${weight}kg` : ''}，推荐 {displayData.size}
             ，适合{pose === 'sprint' ? '高功率输出' : '你当前'}骑行风格。
           </p>
           <div className="mt-2">
             <span className="inline-block rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary">
-              推荐：{displayData!.size}
+              推荐：{displayData.size}
             </span>
           </div>
         </div>
       ) : (
         <div>
           <p className="text-sm leading-relaxed text-muted-foreground">
-            {displayData!.analysis}
+            {displayData.analysis}
           </p>
           <div className="mt-2">
             <span className="inline-block rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary">
-              推荐：{displayData!.size}
+              推荐：{displayData.size}
             </span>
           </div>
         </div>

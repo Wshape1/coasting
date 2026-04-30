@@ -1,4 +1,12 @@
-import { useBikeStore } from '@/store/useBikeStore';
+import { useMemo } from 'react';
+import { useBikeStore, type Pose } from '@/store/useBikeStore';
+
+const poseAngles: Record<Pose, { arm: number; leg: number; torso: number }> = {
+  seated: { arm: 0.3, leg: 0.05, torso: 0 },
+  sprint: { arm: -0.4, leg: 0.3, torso: 0.15 },
+  climbing: { arm: 0.6, leg: -0.2, torso: -0.1 },
+  aero: { arm: -0.6, leg: 0.15, torso: 0.2 },
+};
 
 function BodyPart({
   position,
@@ -20,125 +28,142 @@ function BodyPart({
 }
 
 export function HumanModel() {
-  const { height, inseam } = useBikeStore();
+  const { height, inseam, pose } = useBikeStore();
+  const angles = poseAngles[pose];
 
-  // Normalize measurements: height in cm → 3D units (1 unit = 1 meter)
-  const h = height / 100;
-  const legRatio = inseam / height;
-  const armRatio = 0.35; // default arm ratio
+  const parts = useMemo(() => {
+    const h = height / 100;
+    const legRatio = inseam / height;
+    const armRatio = 0.35;
 
-  // Derived proportions
-  const legLen = h * legRatio;
-  const armLen = h * armRatio;
-  const torsoLen = h * 0.3;
-  const headSize = h * 0.13;
-  const shoulderWidth = h * 0.22;
-  const hipWidth = h * 0.2;
-  const bodyDepth = h * 0.12;
+    const legLen = h * legRatio;
+    const armLen = h * armRatio;
+    const torsoLen = h * 0.3;
+    const headSize = h * 0.13;
+    const shoulderWidth = h * 0.22;
+    const hipWidth = h * 0.2;
+    const bodyDepth = h * 0.12;
 
-  // Joint positions
-  const footY = legLen / 2;
-  const kneeY = legLen * 0.55;
-  const hipY = legLen;
-  const shoulderY = hipY + torsoLen;
-  const headY = shoulderY + headSize * 0.5;
-  const elbowY = shoulderY - armLen * 0.45;
+    const footY = legLen / 2;
+    const kneeY = legLen * 0.55;
+    const hipY = legLen;
+    const shoulderY = hipY + torsoLen;
+    const headY = shoulderY + headSize * 0.5;
+    const elbowY = shoulderY - armLen * 0.45;
+
+    return {
+      headSize,
+      headY,
+      shoulderY,
+      hipY,
+      torsoLen,
+      shoulderWidth,
+      hipWidth,
+      bodyDepth,
+      armLen,
+      legLen,
+      elbowY,
+      kneeY,
+      footY,
+      h,
+    };
+  }, [height, inseam]);
 
   return (
-    <group position={[0, 0.01, 0]}>
+    <group position={[0, 0.01, 0]} rotation={[angles.torso, 0, 0]}>
       {/* Head */}
-      <mesh position={[0, headY + 0.02, 0]}>
-        <sphereGeometry args={[headSize * 0.45, 16, 16]} />
+      <mesh position={[0, parts.headY + 0.02, 0]}>
+        <sphereGeometry args={[parts.headSize * 0.45, 16, 16]} />
         <meshStandardMaterial color="#f5d0b0" />
       </mesh>
 
       {/* Neck */}
       <BodyPart
-        position={[0, shoulderY + headSize * 0.1, 0]}
-        scale={[headSize * 0.35, headSize * 0.2, headSize * 0.35]}
+        position={[0, parts.shoulderY + parts.headSize * 0.1, 0]}
+        scale={[parts.headSize * 0.35, parts.headSize * 0.2, parts.headSize * 0.35]}
         color="#f5d0b0"
       />
 
       {/* Torso */}
       <BodyPart
-        position={[0, hipY + torsoLen * 0.5, 0]}
-        scale={[shoulderWidth * 0.8, torsoLen, bodyDepth]}
+        position={[0, parts.hipY + parts.torsoLen * 0.5, 0]}
+        scale={[parts.shoulderWidth * 0.8, parts.torsoLen, parts.bodyDepth]}
         color="#3b82f6"
       />
 
       {/* Left upper arm */}
       <BodyPart
-        position={[-shoulderWidth * 0.55, shoulderY - armLen * 0.25, 0]}
-        rotation={[0, 0, 0.15]}
-        scale={[h * 0.035, armLen * 0.45, h * 0.035]}
+        position={[-parts.shoulderWidth * 0.55, parts.shoulderY - parts.armLen * 0.25, 0]}
+        rotation={[angles.arm, 0, 0.15]}
+        scale={[parts.h * 0.035, parts.armLen * 0.45, parts.h * 0.035]}
         color="#f5d0b0"
       />
 
       {/* Right upper arm */}
       <BodyPart
-        position={[shoulderWidth * 0.55, shoulderY - armLen * 0.25, 0]}
-        rotation={[0, 0, -0.15]}
-        scale={[h * 0.035, armLen * 0.45, h * 0.035]}
+        position={[parts.shoulderWidth * 0.55, parts.shoulderY - parts.armLen * 0.25, 0]}
+        rotation={[angles.arm, 0, -0.15]}
+        scale={[parts.h * 0.035, parts.armLen * 0.45, parts.h * 0.035]}
         color="#f5d0b0"
       />
 
       {/* Left lower arm */}
       <BodyPart
-        position={[-shoulderWidth * 0.52, elbowY - armLen * 0.25, 0.02]}
-        rotation={[0.3, 0, 0.1]}
-        scale={[h * 0.03, armLen * 0.45, h * 0.03]}
+        position={[-parts.shoulderWidth * 0.52, parts.elbowY - parts.armLen * 0.25, 0.02]}
+        rotation={[angles.arm + 0.3, 0, 0.1]}
+        scale={[parts.h * 0.03, parts.armLen * 0.45, parts.h * 0.03]}
         color="#f5d0b0"
       />
 
       {/* Right lower arm */}
       <BodyPart
-        position={[shoulderWidth * 0.52, elbowY - armLen * 0.25, 0.02]}
-        rotation={[0.3, 0, -0.1]}
-        scale={[h * 0.03, armLen * 0.45, h * 0.03]}
+        position={[parts.shoulderWidth * 0.52, parts.elbowY - parts.armLen * 0.25, 0.02]}
+        rotation={[angles.arm + 0.3, 0, -0.1]}
+        scale={[parts.h * 0.03, parts.armLen * 0.45, parts.h * 0.03]}
         color="#f5d0b0"
       />
 
       {/* Left thigh */}
       <BodyPart
-        position={[-hipWidth * 0.3, hipY - legLen * 0.25, 0]}
-        rotation={[0.05, 0, 0]}
-        scale={[h * 0.045, legLen * 0.45, h * 0.045]}
+        position={[-parts.hipWidth * 0.3, parts.hipY - parts.legLen * 0.25, 0]}
+        rotation={[angles.leg, 0, 0]}
+        scale={[parts.h * 0.045, parts.legLen * 0.45, parts.h * 0.045]}
         color="#1e40af"
       />
 
       {/* Right thigh */}
       <BodyPart
-        position={[hipWidth * 0.3, hipY - legLen * 0.25, 0]}
-        rotation={[-0.05, 0, 0]}
-        scale={[h * 0.045, legLen * 0.45, h * 0.045]}
+        position={[parts.hipWidth * 0.3, parts.hipY - parts.legLen * 0.25, 0]}
+        rotation={[-angles.leg, 0, 0]}
+        scale={[parts.h * 0.045, parts.legLen * 0.45, parts.h * 0.045]}
         color="#1e40af"
       />
 
       {/* Left shin */}
       <BodyPart
-        position={[-hipWidth * 0.3, kneeY - legLen * 0.25, 0]}
-        scale={[h * 0.035, legLen * 0.45, h * 0.035]}
+        position={[-parts.hipWidth * 0.3, parts.kneeY - parts.legLen * 0.25, 0]}
+        scale={[parts.h * 0.035, parts.legLen * 0.45, parts.h * 0.035]}
         color="#f5d0b0"
       />
 
       {/* Right shin */}
       <BodyPart
-        position={[hipWidth * 0.3, kneeY - legLen * 0.25, 0]}
-        scale={[h * 0.035, legLen * 0.45, h * 0.035]}
+        position={[parts.hipWidth * 0.3, parts.kneeY - parts.legLen * 0.25, 0]}
+        scale={[parts.h * 0.035, parts.legLen * 0.45, parts.h * 0.035]}
         color="#f5d0b0"
       />
 
       {/* Left foot */}
       <BodyPart
-        position={[-hipWidth * 0.3, footY - legLen * 0.05, 0.03]}
-        scale={[h * 0.04, h * 0.02, h * 0.06]}
+        position={[-parts.hipWidth * 0.3, parts.footY - parts.legLen * 0.05, 0.03]}
+        scale={[parts.h * 0.04, parts.h * 0.02, parts.h * 0.06]}
         color="#1e40af"
       />
 
       {/* Right foot */}
       <BodyPart
-        position={[hipWidth * 0.3, footY - legLen * 0.05, 0.03]}
-        scale={[h * 0.04, h * 0.02, h * 0.06]}
+        position={[parts.hipWidth * 0.3, parts.footY - parts.legLen * 0.05, 0.03]}
+        scale={[parts.h * 0.04, parts.h * 0.02, parts.h * 0.06]}
         color="#1e40af"
       />
     </group>

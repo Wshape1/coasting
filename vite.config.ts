@@ -8,11 +8,15 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
-    visualizer({
-      filename: 'dist/stats.html',
-      open: false,
-      gzipSize: true,
-    }),
+    ...(process.env.ANALYZE
+      ? [
+          visualizer({
+            filename: 'dist/stats.html',
+            open: false,
+            gzipSize: true,
+          }),
+        ]
+      : []),
   ],
   resolve: {
     alias: {
@@ -20,6 +24,7 @@ export default defineConfig({
     },
   },
   build: {
+    target: 'es2020',
     rollupOptions: {
       output: {
         manualChunks(id: string) {
@@ -28,6 +33,12 @@ export default defineConfig({
           }
           if (id.includes('@react-three/fiber')) {
             return 'r3f';
+          }
+          if (id.includes('@tanstack/react-query')) {
+            return 'query';
+          }
+          if (id.includes('zustand')) {
+            return 'state';
           }
         },
       },

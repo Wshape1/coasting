@@ -2,11 +2,25 @@ export const config = {
   runtime: 'edge',
 };
 
+const sizes = [
+  { max: 160, label: 'XS' },
+  { max: 170, label: 'S' },
+  { max: 180, label: 'M' },
+  { max: 190, label: 'L' },
+];
+
+const sizeLabels: Record<string, string> = {
+  road: '公路车',
+  mountain: '山地车',
+  urban: '城市车',
+};
+
 interface RecommendRequest {
   height: number;
   inseam: number;
-  armLength: number;
-  bikeType: 'road' | 'mountain';
+  weight: number;
+  bikeType: 'road' | 'mountain' | 'urban';
+  pose: 'seated' | 'sprint' | 'climbing' | 'aero';
 }
 
 interface RecommendResponse {
@@ -26,35 +40,31 @@ export default async function handler(req: Request): Promise<Response> {
 
   try {
     const body = (await req.json()) as RecommendRequest;
-    const { height, inseam, armLength, bikeType } = body;
+    const { height, inseam, weight, bikeType, pose } = body;
 
-    // Stub logic: simple size estimation based on height
-    const size =
-      height < 160
-        ? 'XS'
-        : height < 170
-          ? 'S'
-          : height < 180
-            ? 'M'
-            : height < 190
-              ? 'L'
-              : 'XL';
+    const sizeEntry = sizes.find((s) => height < s.max) ?? { label: 'XL' };
+    const size = sizeEntry.label;
+    const bikeLabel = sizeLabels[bikeType] ?? '自行车';
 
     const stack = Math.round(
-      bikeType === 'road' ? height * 0.31 : height * 0.33,
+      bikeType === 'road' ? height * 0.31 : bikeType === 'mountain' ? height * 0.33 : height * 0.32,
     );
     const reach = Math.round(
       bikeType === 'road' ? height * 0.22 : height * 0.21,
     );
 
-    const analysis = `Based on your height of ${height}cm, inseam of ${inseam}cm, and arm length of ${armLength}cm, we recommend a ${size} frame (stack: ${stack}cm / reach: ${reach}cm) for ${bikeType} biking. This is a stub response — integrate DeepSeek API for AI-powered analysis.`;
+    const poseHint =
+      pose === 'seated'
+        ? '适合休闲骑行'
+        : pose === 'sprint'
+          ? '适合高功率输出'
+          : pose === 'climbing'
+            ? '适合爬坡路段'
+            : '适合低风阻巡航';
 
-    const response: RecommendResponse = {
-      size,
-      stack,
-      reach,
-      analysis,
-    };
+    const analysis = `根据你的身高 ${height}cm、跨高 ${inseam}cm、体重 ${weight}kg，推荐 ${bikeLabel} ${size} 码（Stack ${stack}cm / Reach ${reach}cm）。${poseHint}。`;
+
+    const response: RecommendResponse = { size: `${bikeLabel} ${size} 码`, stack, reach, analysis };
 
     return new Response(JSON.stringify(response), {
       status: 200,

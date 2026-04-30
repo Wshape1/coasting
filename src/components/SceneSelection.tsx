@@ -26,7 +26,7 @@ export function SceneSelection() {
                   : 'shadow-md bg-card hover:bg-card/80'
               }`}
             >
-              <span className="text-xl">{s.icon}</span>
+              <span className="text-xl" aria-hidden="true">{s.icon}</span>
               <span
                 className={`text-xs ${
                   active

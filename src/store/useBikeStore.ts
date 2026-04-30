@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
 export type BikeType = 'road' | 'mountain' | 'urban';
 export type Pose = 'seated' | 'sprint' | 'climbing' | 'aero';
@@ -17,16 +18,31 @@ export interface BikeStore {
   setScene: (scene: Scene) => void;
 }
 
-export const useBikeStore = create<BikeStore>((set) => ({
-  height: 178,
-  weight: 72,
-  inseam: 82,
-  bikeType: 'road',
-  pose: 'seated',
-  scene: 'city',
-  setMeasurements: (height, weight, inseam) =>
-    set({ height, weight, inseam }),
-  setBikeType: (bikeType) => set({ bikeType }),
-  setPose: (pose) => set({ pose }),
-  setScene: (scene) => set({ scene }),
-}));
+export const useBikeStore = create<BikeStore>()(
+  persist(
+    (set) => ({
+      height: 178,
+      weight: 72,
+      inseam: 82,
+      bikeType: 'road',
+      pose: 'seated',
+      scene: 'city',
+      setMeasurements: (height, weight, inseam) =>
+        set({ height, weight, inseam }),
+      setBikeType: (bikeType) => set({ bikeType }),
+      setPose: (pose) => set({ pose }),
+      setScene: (scene) => set({ scene }),
+    }),
+    {
+      name: 'coasting-store',
+      partialize: (state) => ({
+        height: state.height,
+        weight: state.weight,
+        inseam: state.inseam,
+        bikeType: state.bikeType,
+        pose: state.pose,
+        scene: state.scene,
+      }),
+    },
+  ),
+);

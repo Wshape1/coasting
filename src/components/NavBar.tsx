@@ -7,15 +7,17 @@ export function NavBar() {
   const initial = 'U';
 
   return (
-    <nav className="flex h-14 items-center gap-4 rounded-full bg-white/60 px-5 shadow-lg ring-1 ring-black/5 backdrop-blur-xl md:w-auto md:gap-6 md:rounded-2xl md:px-6 w-[90vw]">
+    <nav className="flex h-14 items-center gap-4 rounded-full bg-white/60 px-5 shadow-lg ring-1 ring-black/5 backdrop-blur-xl md:w-auto md:gap-6 md:rounded-2xl md:px-6 w-[90vw]" aria-label="主导航">
       <span className="text-xl font-bold tracking-tight text-foreground">
         Coasting
       </span>
 
-      <div className="hidden items-center justify-center gap-8 md:flex">
+      <div className="hidden items-center justify-center gap-8 md:flex" role="menubar">
         {navItems.map((item, i) => (
           <button
             key={item}
+            role="menuitem"
+            aria-current={i === 0 ? 'page' : undefined}
             className={`text-sm transition-colors ${
               i === 0
                 ? 'font-medium text-foreground'

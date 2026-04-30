@@ -26,7 +26,7 @@ export function BikeSelection() {
                   : 'shadow-md bg-card hover:bg-card/80'
               }`}
             >
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-2xl">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-2xl" aria-hidden="true">
                 {b.icon}
               </div>
               <div className="flex-1">
