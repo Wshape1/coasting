@@ -1,5 +1,12 @@
 import { useBikeStore } from '@/store/useBikeStore';
 
+const poseLabels: Record<string, string> = {
+  seated: '坐姿骑行匹配度',
+  sprint: '冲刺姿态匹配度',
+  climbing: '站立爬坡匹配度',
+  aero: '低风阻姿态匹配度',
+};
+
 const matchScores: Record<string, number> = {
   seated: 89,
   sprint: 76,
@@ -59,7 +66,7 @@ export function PoseAnalysis() {
         {/* Info */}
         <div className="space-y-1.5">
           <p className="text-sm font-semibold text-foreground">
-            冲刺姿态匹配度
+            {poseLabels[pose] ?? '姿态匹配度'}
           </p>
           <p className="whitespace-pre-line text-xs leading-relaxed text-muted-foreground">
             {message}

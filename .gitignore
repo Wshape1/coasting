@@ -19,3 +19,9 @@ coverage/
 
 # Skills lock
 skills-lock.json
+
+# Claude Code agent files
+.claude/
+
+# UI screenshots
+snapshot/

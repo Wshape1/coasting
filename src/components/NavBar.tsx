@@ -1,10 +1,20 @@
 import { useBikeStore } from '@/store/useBikeStore';
 
-const navItems = ['姿态模拟', '选车建议', '模型库', '个人中心'];
+const navItems: { label: string; section: string }[] = [
+  { label: '姿态模拟', section: 'viewport-section' },
+  { label: '选车建议', section: 'bike-section' },
+  { label: '模型库', section: 'data-section' },
+  { label: '个人中心', section: 'profile-section' },
+];
 
 export function NavBar() {
   const { height } = useBikeStore();
   const initial = 'U';
+
+  const scrollTo = (sectionId: string) => {
+    const el = document.getElementById(sectionId);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   return (
     <nav className="flex h-14 items-center gap-4 rounded-full bg-white/60 px-5 shadow-lg ring-1 ring-black/5 backdrop-blur-xl md:w-auto md:gap-6 md:rounded-2xl md:px-6 w-[90vw]" aria-label="主导航">
@@ -15,16 +25,17 @@ export function NavBar() {
       <div className="hidden items-center justify-center gap-8 md:flex" role="menubar">
         {navItems.map((item, i) => (
           <button
-            key={item}
+            key={item.label}
             role="menuitem"
             aria-current={i === 0 ? 'page' : undefined}
+            onClick={() => scrollTo(item.section)}
             className={`text-sm transition-colors ${
               i === 0
                 ? 'font-medium text-foreground'
                 : 'font-normal text-muted-foreground hover:text-foreground'
             }`}
           >
-            {item}
+            {item.label}
           </button>
         ))}
       </div>

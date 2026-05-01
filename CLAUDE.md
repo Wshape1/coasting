@@ -23,59 +23,73 @@ Single-page app with three breakpoint-driven layouts in `src/App.tsx`:
 |--------|-----------|-----------|
 | Desktop | `>=1024px` | 3-column (left 280px + center flex + right 320px) |
 | Tablet  | `>=768px`  | 2-column (viewport flex + right 320px panel) |
-| Mobile  | `<768px`   | Single-column scroll + floating top nav + bottom tab bar |
+| Mobile  | `<768px`   | Tab-driven: fixed top nav + scrollable sections + floating bottom tab bar |
 
-The `useMediaQuery` hook (`src/hooks/useMediaQuery.ts`) drives layout switching. All three layouts compose from the same shared components — they are not separate code paths.
+`useMediaQuery` (`src/hooks/useMediaQuery.ts`) drives layout switching. All three layouts share the same components; only arrangement differs.
+
+On **mobile**, the bottom `MobileTabBar` controls which section is visible via `activeTab` state in `MobileLayout` (姿态模拟/选车/数据/个人中心). Sections are shown/hidden with Tailwind `hidden`.
 
 ### State Management (Zustand)
 
-`src/store/useBikeStore.ts` — singular global store:
+`src/store/useBikeStore.ts` — global store with `zustand/middleware` **persist** (localStorage key `coasting-store`):
 
-- **Measurements**: height, weight, inseam
+- **Measurements**: height (cm), weight (kg), inseam (cm)
 - **Selections**: bikeType (`road|mountain|urban`), pose (`seated|sprint|climbing|aero`), scene (`city|mountain|seaside`)
 
 ### 3D Rendering (React Three Fiber)
 
-Stack: `@react-three/fiber` + `three@0.183.0`
+Stack: `@react-three/fiber` v10 alpha + `three@0.183.0` + `@react-three/drei`
 
-| Component | Role |
-|-----------|------|
-| `BikeCanvas.tsx` | Sets up Canvas, lights, shadows, tone mapping |
-| `BikeModel.tsx` | Geometric bike from Tube/Wheel primitives — frame color varies by bikeType |
-| `HumanModel.tsx` | Rider figure with pose-driven animation |
-| `CameraControls.tsx` | Orbit-style camera |
-| `SimpleGrid.tsx` | Ground grid + reflection |
+**glTF Model Pipeline**: Both models loaded from `public/models/` using `GLTFLoader`.
+
+| Model | File | Loader | Notes |
+|-------|------|--------|-------|
+| Bike | `models/bike_opt/bike.gltf` (+ `.bin` + 2 PNG textures) | `useLoader(GLTFLoader, url)` → `<primitive>` | Node has `scale[100]`, root scale `0.38` |
+| Human | `models/human.glb` (234KB, 4944 verts, 1 mesh) | Raw `GLTFLoader.load()` in `useEffect` → extract geometry → render as `<mesh>` | Z-up coordinate system, needs `rotateX(π/2)` on geometry to convert to Y-up |
+
+**HumanModel loading pattern** — glTF node transforms must be accounted for:
+1. Load via `GLTFLoader.load()`
+2. Find `THREE.Mesh` by traversing `gltf.scene.traverse()`
+3. Clone geometry, `rotateX(Math.PI / 2)` (Z-up → Y-up), center via bounding box, `computeVertexNormals()`
+4. Render via `<mesh geometry={geo}>` with override material and `rotation={[0, -PI/2, 0]}` to face +X
+
+**VehicleModel** — bike color changes with `bikeType` by reading `useBikeStore` and calling `material.color.set()` on the loaded scene's materials.
+
+**Important**: When moving R3F content into a flex layout, ensure the parent of any `flex-1` element is a flex container (`flex flex-col`), otherwise the flex item collapses to 0 height.
+
+### API
+
+`api/ai/recommend.ts` — Vercel Edge Function, stub POST endpoint. Accepts `{height, inseam, weight, bikeType, pose}`, returns `{size, stack, reach, analysis}`. The `AIRecommendationCard` has hardcoded fallback data when the API is unreachable (offline-first).
 
 ### UI Component Tree
 
 ```
 App (QueryClientProvider)
-└── AppLayout
-    ├── NavBar           — Apple-style floating nav
-    ├── Viewport         — 3D Canvas wrapper
-    │   └── BikeCanvas   — R3F Canvas + scene
+└── MobileLayout / TabletLayout / DesktopLayout
+    ├── NavBar           — floating pill (mobile) / full-width (desktop)
+    ├── Viewport         — 3D wrapper with overlay labels
+    │   └── BikeCanvas   — R3F Canvas (scene background, ErrorBoundary, Suspense)
+    │       ├── HumanModel
+    │       ├── BikeModel
+    │       ├── SimpleGrid
+    │       └── CameraControls
     ├── PoseSwitcher     — 4-pose capsule selector
-    ├── BikeSelection    — Bike type pills
-    ├── SceneSelection   — Scene environment picker
-    ├── DataPanel        — Bike spec summary
-    ├── BodyInput        — Height/Weight/Inseam sliders
-    ├── PoseAnalysis     — Donut chart + match score
-    ├── AIRecommendationCard — AI-powered fit suggestion
-    └── MobileTabBar     — (mobile only) bottom tab navigation
+    ├── BikeSelection    — 3 bike type cards
+    ├── SceneSelection   — 3 scene cards (changes Canvas bg color)
+    ├── DataPanel        — Bike frame/weight/gears spec
+    ├── BodyInput        — Height/Weight/Inseam number inputs
+    ├── PoseAnalysis     — SVG ring score + match message
+    ├── AIRecommendationCard — skeleton loading fallback
+    └── MobileTabBar     — 4-tab bottom island (mobile only)
 ```
-
-### UI Primitives (src/components/ui/)
-
-shadcn-style components built on Radix primitives: Button, Card, Drawer (vaul), Input, Label, Select, Slider. Uses `cn()` utility (clsx + tailwind-merge).
 
 ### Styling
 
-- Tailwind CSS v4 with `@theme` custom palette
-- HSL color tokens in `:root` (warm cream/yellow scheme)
-- Glassmorphism via `bg-white/70 backdrop-blur-xl`
-- Fluid font sizing via `clamp()` utilities
+- Tailwind CSS v4 with `@theme` custom HSL palette (warm cream + golden primary)
+- Glassmorphism: `bg-white/70 shadow-lg ring-1 ring-black/5 backdrop-blur-xl`
+- `src/index.css` defines `:root` variables, scrollbar styling, fluid font utilities
 
-## Design Files
+### Design Files
 
 UI mockups in `pencil/main.pen` (Pencil format). Exported snapshots in `snapshot/`.
 

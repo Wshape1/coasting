@@ -2853,7 +2853,8 @@
                   "fill": "$fg-muted",
                   "content": "B",
                   "fontFamily": "Inter",
-                  "fontSize": 18
+                  "fontSize": 18,
+                  "fontWeight": "normal"
                 },
                 {
                   "type": "text",
@@ -2884,7 +2885,8 @@
                   "fill": "$fg-muted",
                   "content": "D",
                   "fontFamily": "Inter",
-                  "fontSize": 18
+                  "fontSize": 18,
+                  "fontWeight": "normal"
                 },
                 {
                   "type": "text",
@@ -2915,7 +2917,8 @@
                   "fill": "$fg-muted",
                   "content": "P",
                   "fontFamily": "Inter",
-                  "fontSize": 18
+                  "fontSize": 18,
+                  "fontWeight": "normal"
                 },
                 {
                   "type": "text",
