@@ -5,6 +5,7 @@ import { visualizer } from 'rollup-plugin-visualizer';
 import path from 'path';
 
 export default defineConfig({
+  base: process.env.VITE_BASE ?? '/coasting/',
   plugins: [
     react(),
     tailwindcss(),
