@@ -1,3 +1,4 @@
+import { useState, useCallback } from 'react';
 import { useBikeStore, type Pose, type Scene, type PresetKey } from '@/store/useBikeStore';
 import { BikeCanvas } from './BikeCanvas';
 
@@ -24,12 +25,19 @@ export function Viewport() {
   const pose = useBikeStore((s) => s.pose);
   const scene = useBikeStore((s) => s.scene);
   const presetKey = useBikeStore((s) => s.presetKey);
+  const [canvasKey, setCanvasKey] = useState(0);
+  const [reloadMinMs, setReloadMinMs] = useState(0);
+
+  const handleReload = useCallback(() => {
+    setReloadMinMs(800);
+    setCanvasKey((k) => k + 1);
+  }, []);
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col">
       {/* 3D Canvas area */}
-      <div className="relative min-h-0 flex-1 overflow-hidden rounded-2xl bg-[#F9F6F0] shadow-lg">
-        <BikeCanvas />
+      <div className="relative min-h-0 flex-1 overflow-hidden">
+        <BikeCanvas key={canvasKey} minLoadMs={reloadMinMs} />
 
         {/* Scene label - top left */}
         <div className="pointer-events-none absolute left-4 top-4 rounded-xl bg-white/60 px-4 py-2.5 text-sm font-medium text-foreground backdrop-blur-md">
@@ -41,10 +49,12 @@ export function Viewport() {
           当前姿态：{poseLabels[pose]} | 推荐车架：{bikeSizeLabels[presetKey]}
         </div>
 
-        {/* Rotate button - bottom right */}
+        {/* Reload button - bottom right */}
         <button
-          aria-label="旋转视角 Rotate View"
-          className="absolute bottom-4 right-4 flex h-10 w-10 items-center justify-center rounded-2xl bg-white/60 shadow-lg ring-1 ring-black/5 backdrop-blur-md transition-transform hover:scale-105 active:scale-95"
+          aria-label="重新加载场景 Reload Scene"
+          onClick={handleReload}
+          className="absolute bottom-4 right-4 flex h-10 w-10 items-center justify-center rounded-2xl bg-white/60 shadow-lg ring-1 ring-black/5 backdrop-blur-md transition-all hover:scale-105 hover:bg-white/80 active:scale-95 cursor-pointer"
+          title="重新加载 3D 场景"
         >
           <svg
             width="18"

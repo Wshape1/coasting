@@ -49,18 +49,26 @@
   --ring: 38 70% 55%;
 }
 
-/* Scrollbar styling */
-::-webkit-scrollbar {
-  width: 4px;
+/* Hide scrollbar — keeps scroll, hides track/thumb */
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
 }
 
-::-webkit-scrollbar-track {
-  background: transparent;
+/* Indeterminate loading progress bar */
+@keyframes loading-bar {
+  0%   { left: 0%;   width: 0%;  }
+  15%  { left: 0%;   width: 35%; }
+  35%  { left: 35%;  width: 30%; }
+  55%  { left: 65%;  width: 35%; }
+  75%  { left: 100%; width: 0%;  }
+  100% { left: 0%;   width: 0%;  }
 }
-
-::-webkit-scrollbar-thumb {
-  background: hsl(0 0% 0% / 0.1);
-  border-radius: 99px;
+.animate-loading-bar {
+  animation: loading-bar 2s ease-in-out infinite;
 }
 
 /* Mobile-first container queries setup */

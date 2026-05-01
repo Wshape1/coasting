@@ -1,7 +1,7 @@
 import { useBikeStore } from '@/store/useBikeStore';
 import { COLOR_DEFS } from '@/config/presets';
 import { BikeSelection } from './BikeSelection';
-import { SceneSelection } from './SceneSelection';
+// import { SceneSelection } from './SceneSelection';
 import { ParamSliders } from './ParamSliders';
 import { DerivedPanel } from './DerivedPanel';
 
@@ -22,11 +22,11 @@ export function CustomizationPanel() {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* 车型选择 + 场景选择 */}
+      {/* 车型选择 */}
       <div className="rounded-2xl bg-white/70 p-5 shadow-lg ring-1 ring-black/5 backdrop-blur-xl flex flex-col gap-4">
         <BikeSelection />
-        <div className="h-px bg-black/5" />
-        <SceneSelection />
+        {/* <div className="h-px bg-black/5" />
+        <SceneSelection /> */}
       </div>
 
       {/* 外观定制 */}

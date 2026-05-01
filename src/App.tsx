@@ -85,7 +85,7 @@ function TabletLayout() {
         </div>
 
         {/* Right panel - scrollable */}
-        <div className="flex w-[320px] shrink-0 flex-col gap-4 overflow-y-auto pb-2">
+        <div className="flex w-[320px] shrink-0 flex-col gap-4 overflow-y-auto scrollbar-none pb-2">
           <CustomizationPanel />
           <div className="rounded-2xl bg-white/70 p-5 shadow-lg ring-1 ring-black/5 backdrop-blur-xl">
             <BodyInput />
@@ -106,7 +106,7 @@ function DesktopLayout() {
         {/* Left column — 自定义面板 */}
         <div
           id="bike-section"
-          className="flex w-[300px] shrink-0 flex-col gap-4 overflow-y-auto pb-2"
+          className="flex w-[300px] shrink-0 flex-col gap-4 overflow-y-auto scrollbar-none pb-2"
         >
           <CustomizationPanel />
         </div>
@@ -125,7 +125,7 @@ function DesktopLayout() {
         {/* Right column — 数据/个人中心 */}
         <div
           id="data-section"
-          className="flex w-[320px] shrink-0 flex-col gap-3 overflow-y-auto pb-2"
+          className="flex w-[320px] shrink-0 flex-col gap-3 overflow-y-auto scrollbar-none pb-2"
         >
           <div className="rounded-2xl bg-white/70 p-5 shadow-lg ring-1 ring-black/5 backdrop-blur-xl">
             <BodyInput />
