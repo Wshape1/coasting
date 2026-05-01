@@ -1,40 +1,47 @@
-import { useBikeStore, type BikeType } from '@/store/useBikeStore';
+import { useBikeStore, type PresetKey } from '@/store/useBikeStore';
 
-const bikes: { key: BikeType; icon: string; name: string; desc: string }[] = [
-  { key: 'mountain', icon: '🚵', name: '山地车', desc: '越野全地形 | 27速' },
-  { key: 'road', icon: '🚴', name: '公路车', desc: '竞速公路 | 22速' },
-  { key: 'urban', icon: '🚲', name: '城市车', desc: '通勤休闲 | 内7速' },
+const bikes: { key: PresetKey; label: string; en: string; desc: string }[] = [
+  { key: 'mountain', label: '山地车', en: 'MTB', desc: '越野全地形 · 29寸' },
+  { key: 'road', label: '公路车', en: 'Road', desc: '竞速公路 · 700c' },
+  { key: 'commuter', label: '城市车', en: 'City', desc: '通勤休闲 · 700c' },
 ];
 
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <h4 className="text-sm font-bold uppercase tracking-widest text-foreground mb-2.5">
+      {children}
+    </h4>
+  );
+}
+
 export function BikeSelection() {
-  const bikeType = useBikeStore((s) => s.bikeType);
-  const setBikeType = useBikeStore((s) => s.setBikeType);
+  const presetKey = useBikeStore((s) => s.presetKey);
+  const setPresetKey = useBikeStore((s) => s.setPresetKey);
 
   return (
-    <div className="space-y-3">
-      <h3 className="text-lg font-semibold text-foreground">选择车型</h3>
-      <div className="space-y-2">
+    <div>
+      <SectionTitle>车型选择 Bike Type</SectionTitle>
+      <div className="flex gap-2">
         {bikes.map((b) => {
-          const active = bikeType === b.key;
+          const active = presetKey === b.key;
           return (
             <button
               key={b.key}
-              onClick={() => setBikeType(b.key)}
-              className={`flex w-full items-center gap-3 rounded-2xl p-4 text-left transition-all ${
+              onClick={() => setPresetKey(b.key)}
+              className={`flex flex-1 flex-col items-center gap-1 rounded-xl py-3 text-center transition-all ${
                 active
-                  ? 'shadow-md bg-card ring-1 ring-primary/30'
-                  : 'shadow-md bg-card hover:bg-card/80'
+                  ? 'shadow-sm bg-primary/10 ring-1 ring-primary/30'
+                  : 'hover:bg-muted/50'
               }`}
             >
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-2xl" aria-hidden="true">
-                {b.icon}
-              </div>
-              <div className="flex-1">
-                <div className="text-base font-semibold text-foreground">
-                  {b.name}
-                </div>
-                <div className="text-xs text-muted-foreground">{b.desc}</div>
-              </div>
+              <span
+                className={`text-sm font-bold ${
+                  active ? 'text-primary' : 'text-muted-foreground'
+                }`}
+              >
+                {b.label}
+              </span>
+              <span className="text-[10px] text-muted-foreground/60">{b.en}</span>
             </button>
           );
         })}

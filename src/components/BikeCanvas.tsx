@@ -18,35 +18,31 @@ const CameraControls = lazy(() =>
 );
 
 const sceneColors: Record<string, string> = {
-  city: '#EAE6DE',
-  mountain: '#D4E6D4',
-  seaside: '#D4E6F0',
+  city: '#F9F6F0',
+  mountain: '#F0F4EC',
+  seaside: '#EDF3F8',
 };
-
-function SceneFallback() {
-  return (
-    <div className="flex h-full w-full items-center justify-center">
-      <div className="flex flex-col items-center gap-3">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-        <p className="text-sm text-muted-foreground">加载 3D 场景...</p>
-      </div>
-    </div>
-  );
-}
 
 function SceneContent() {
   return (
     <>
-      <ambientLight intensity={0.5} />
+      <ambientLight intensity={1.4} />
       <directionalLight
         position={[5, 10, 5]}
-        intensity={1}
+        intensity={2.2}
         castShadow
-        shadow-mapSize-width={1024}
-        shadow-mapSize-height={1024}
+        shadow-mapSize-width={512}
+        shadow-mapSize-height={512}
+        shadow-camera-near={0.5}
+        shadow-camera-far={15}
+        shadow-camera-left={-2.5}
+        shadow-camera-right={2.5}
+        shadow-camera-top={2.5}
+        shadow-camera-bottom={-2.5}
+        shadow-bias={-0.0005}
       />
-      <directionalLight position={[-3, 5, -3]} intensity={0.3} />
-      <hemisphereLight args={['#87ceeb', '#8b7355', 0.4]} />
+      <directionalLight position={[-3, 5, -3]} intensity={0.8} />
+      <hemisphereLight args={['#b8d4f0', '#c4a882', 0.7]} />
 
       <Suspense fallback={null}>
         <HumanModel />
@@ -60,9 +56,8 @@ function SceneContent() {
 
 function WebGLUnsupported() {
   return (
-    <div className="flex h-full w-full items-center justify-center rounded-2xl bg-[#EAE6DE] p-8">
+    <div className="flex h-full w-full items-center justify-center rounded-2xl bg-[#F9F6F0] p-8">
       <div className="text-center">
-        <p className="mb-2 text-4xl">🚴</p>
         <p className="text-base font-semibold text-foreground">
           您的浏览器不支持 3D 渲染
         </p>
@@ -95,9 +90,8 @@ export function BikeCanvas() {
     <div className="absolute inset-0">
       <ErrorBoundary
         fallback={
-          <div className="flex h-full w-full items-center justify-center rounded-2xl bg-[#EAE6DE] p-8">
+          <div className="flex h-full w-full items-center justify-center rounded-2xl bg-[#F9F6F0] p-8">
             <div className="text-center">
-              <p className="mb-2 text-4xl">⚠️</p>
               <p className="text-base font-semibold text-foreground">
                 3D 场景加载失败
               </p>
@@ -115,21 +109,21 @@ export function BikeCanvas() {
           camera={{
             position: [3, 2, 4],
             fov: 45,
-            near: 0.1,
-            far: 100,
+            near: 0.5,
+            far: 20,
           }}
           gl={{
             antialias: true,
             alpha: false,
             outputColorSpace: 'srgb',
-            toneMapping: 3,
+            toneMapping: 4,
+            toneMappingExposure: 1.15,
+            logarithmicDepthBuffer: true,
           }}
-          dpr={isMobile ? [1, 1.5] : [1, 2]}
+          dpr={isMobile ? [1, 1] : [1, 1.5]}
           style={{ background: sceneColors[scene] ?? '#EAE6DE' }}
         >
-          <Suspense fallback={<SceneFallback />}>
-            <SceneContent />
-          </Suspense>
+          <SceneContent />
         </Canvas>
       </ErrorBoundary>
     </div>

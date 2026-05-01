@@ -62,22 +62,24 @@ function LoadingSkeleton() {
 }
 
 export function AIRecommendationCard() {
-  const { height, inseam, weight, bikeType, pose } = useBikeStore();
+  const { height, inseam, weight, presetKey, pose } = useBikeStore();
 
   const { isLoading, error } = useQuery<AIRecommendation>({
-    queryKey: ['aiRecommendation', { height, inseam, weight, bikeType, pose }],
+    queryKey: ['aiRecommendation', { height, inseam, weight, bikeType: presetKey, pose }],
     queryFn: async ({ signal }) => {
+      // Skip API call in dev — Vercel Edge Function not available locally
+      if (import.meta.env.DEV) return fallbackData[pose] ?? fallbackData.seated;
       const res = await fetch('/api/ai/recommend', {
         signal,
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ height, inseam, weight, bikeType, pose }),
+        body: JSON.stringify({ height, inseam, weight, bikeType: presetKey, pose }),
       });
       if (!res.ok) throw new Error('Failed to fetch recommendation');
       return res.json();
     },
     staleTime: 60_000,
-    retry: 1,
+    retry: 0,
   });
 
   const displayData = (fallbackData[pose] ?? fallbackData.seated)!;

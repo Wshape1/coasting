@@ -1,14 +1,14 @@
-import { useBikeStore } from '@/store/useBikeStore';
+import { useBikeStore, type PresetKey } from '@/store/useBikeStore';
 
-const bikeData: Record<string, { frame: string; weight: string; gears: string }> = {
-  road: { frame: '碳纤维', weight: '7.2 kg', gears: 'Shimano Ultegra' },
-  mountain: { frame: '铝合金碳纤', weight: '12.5 kg', gears: 'Shimano Deore XT' },
-  urban: { frame: '铝合金', weight: '10.8 kg', gears: 'Shimano Nexus 内7速' },
+const bikeData: Record<PresetKey, { frame: string; weight: string; gears: string }> = {
+  road: { frame: '碳纤维', weight: '7.2 kg', gears: 'Shimano Ultegra · 22速' },
+  mountain: { frame: '铝合金碳纤', weight: '12.5 kg', gears: 'Shimano Deore XT · 27速' },
+  commuter: { frame: '铝合金', weight: '10.8 kg', gears: 'Shimano Nexus 内7速' },
 };
 
 export function DataPanel() {
-  const bikeType = useBikeStore((s) => s.bikeType);
-  const data = bikeData[bikeType]!;
+  const presetKey = useBikeStore((s) => s.presetKey);
+  const data = bikeData[presetKey]!;
 
   return (
     <div className="space-y-3.5 rounded-2xl bg-white/70 p-5 shadow-lg ring-1 ring-black/5 backdrop-blur-xl">

@@ -12,14 +12,14 @@ const sizes = [
 const sizeLabels: Record<string, string> = {
   road: '公路车',
   mountain: '山地车',
-  urban: '城市车',
+  commuter: '城市车',
 };
 
 interface RecommendRequest {
   height: number;
   inseam: number;
   weight: number;
-  bikeType: 'road' | 'mountain' | 'urban';
+  bikeType: 'road' | 'mountain' | 'commuter';
   pose: 'seated' | 'sprint' | 'climbing' | 'aero';
 }
 

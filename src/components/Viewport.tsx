@@ -1,10 +1,10 @@
-import { useBikeStore, type Pose, type Scene } from '@/store/useBikeStore';
+import { useBikeStore, type Pose, type Scene, type PresetKey } from '@/store/useBikeStore';
 import { BikeCanvas } from './BikeCanvas';
 
 const sceneLabels: Record<Scene, string> = {
-  city: '🌄 城市场景',
-  mountain: '⛰️ 山地场景',
-  seaside: '🌊 海边场景',
+  city: '城市 City',
+  mountain: '山地 MTB Park',
+  seaside: '海边 Seaside',
 };
 
 const poseLabels: Record<Pose, string> = {
@@ -14,19 +14,21 @@ const poseLabels: Record<Pose, string> = {
   aero: '低风阻姿态',
 };
 
-const bikeSizeLabels: Record<string, string> = {
+const bikeSizeLabels: Record<PresetKey, string> = {
   road: 'S 码',
   mountain: 'M 码',
-  urban: 'S 码',
+  commuter: 'S 码',
 };
 
 export function Viewport() {
-  const { pose, scene, bikeType } = useBikeStore();
+  const pose = useBikeStore((s) => s.pose);
+  const scene = useBikeStore((s) => s.scene);
+  const presetKey = useBikeStore((s) => s.presetKey);
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col">
       {/* 3D Canvas area */}
-      <div className="relative min-h-0 flex-1 overflow-hidden rounded-2xl bg-[#EAE6DE] shadow-lg">
+      <div className="relative min-h-0 flex-1 overflow-hidden rounded-2xl bg-[#F9F6F0] shadow-lg">
         <BikeCanvas />
 
         {/* Scene label - top left */}
@@ -36,15 +38,28 @@ export function Viewport() {
 
         {/* Info bar - bottom center */}
         <div className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 rounded-xl bg-white/60 px-3.5 py-3 text-xs font-medium text-foreground backdrop-blur-md">
-          当前姿态：{poseLabels[pose]} | 推荐车架：{bikeSizeLabels[bikeType]}
+          当前姿态：{poseLabels[pose]} | 推荐车架：{bikeSizeLabels[presetKey]}
         </div>
 
         {/* Rotate button - bottom right */}
         <button
-          aria-label="旋转视角"
-          className="absolute bottom-4 right-4 flex h-10 w-10 items-center justify-center rounded-2xl bg-white/60 text-lg shadow-lg ring-1 ring-black/5 backdrop-blur-md transition-transform hover:scale-105 active:scale-95"
+          aria-label="旋转视角 Rotate View"
+          className="absolute bottom-4 right-4 flex h-10 w-10 items-center justify-center rounded-2xl bg-white/60 shadow-lg ring-1 ring-black/5 backdrop-blur-md transition-transform hover:scale-105 active:scale-95"
         >
-          <span aria-hidden="true">🔄</span>
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="text-foreground"
+          >
+            <polyline points="1 4 1 10 7 10" />
+            <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+          </svg>
         </button>
       </div>
     </div>
