@@ -58,11 +58,11 @@ export const useBikeStore = create<BikeStore>()(
     (set, get) => ({
       height: 178,
       weight: 72,
-      inseam: 82,
+      inseam: 93,
       armSpan: 178,
       shoulderWidth: 41,
-      legScale: 82 / 178,
-      torsoScl: 1 - 82 / 178,
+      legScale: 0.52,
+      torsoScl: 0.48,
       presetKey: 'road',
       targetParams: { ...PRESETS.road },
       currentParams: { ...PRESETS.road },
@@ -96,7 +96,7 @@ export const useBikeStore = create<BikeStore>()(
         return { torsoScl: v, legScale: L, inseam: newInseam };
       }),
       resetHumanMeasurements: () => {
-        const H = 178, L = 0.618;
+        const H = 178, L = 0.52;
         return set({
           height: H, weight: 72, inseam: Math.round(H * L),
           armSpan: H, shoulderWidth: 41, legScale: L, torsoScl: 1 - L,
