@@ -1,12 +1,12 @@
 import { useState, useCallback } from 'react';
-import { useBikeStore, type Pose, type Scene, type PresetKey } from '@/store/useBikeStore';
+import { useBikeStore, type Pose, /* type Scene, */ type PresetKey } from '@/store/useBikeStore';
 import { BikeCanvas } from './BikeCanvas';
 
-const sceneLabels: Record<Scene, string> = {
-  city: '城市 City',
-  mountain: '山地 MTB Park',
-  seaside: '海边 Seaside',
-};
+// const sceneLabels: Record<Scene, string> = {
+//   city: '城市 City',
+//   mountain: '山地 MTB Park',
+//   seaside: '海边 Seaside',
+// };
 
 const poseLabels: Record<Pose, string> = {
   seated: '坐姿骑行',
@@ -23,12 +23,18 @@ const bikeSizeLabels: Record<PresetKey, string> = {
 
 export function Viewport() {
   const pose = useBikeStore((s) => s.pose);
-  const scene = useBikeStore((s) => s.scene);
+  // const scene = useBikeStore((s) => s.scene);
   const presetKey = useBikeStore((s) => s.presetKey);
+  const isAnimating = useBikeStore((s) => s.isAnimating);
+  const showHuman = useBikeStore((s) => s.showHuman);
+  const toggleAnimation = useBikeStore((s) => s.toggleAnimation);
+  const toggleHuman = useBikeStore((s) => s.toggleHuman);
   const [canvasKey, setCanvasKey] = useState(0);
   const [reloadMinMs, setReloadMinMs] = useState(0);
 
   const handleReload = useCallback(() => {
+    const store = useBikeStore.getState();
+    if (store.isAnimating) store.toggleAnimation();
     setReloadMinMs(800);
     setCanvasKey((k) => k + 1);
   }, []);
@@ -40,13 +46,45 @@ export function Viewport() {
         <BikeCanvas key={canvasKey} minLoadMs={reloadMinMs} />
 
         {/* Scene label - top left */}
-        <div className="pointer-events-none absolute left-4 top-4 rounded-xl bg-white/60 px-4 py-2.5 text-sm font-medium text-foreground backdrop-blur-md">
+        {/* <div className="pointer-events-none absolute left-4 top-4 rounded-xl bg-white/60 px-4 py-2.5 text-sm font-medium text-foreground backdrop-blur-md">
           {sceneLabels[scene]} · {poseLabels[pose]}
-        </div>
+        </div> */}
 
-        {/* Info bar - bottom center */}
-        <div className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 rounded-xl bg-white/60 px-3.5 py-3 text-xs font-medium text-foreground backdrop-blur-md">
-          当前姿态：{poseLabels[pose]} | 推荐车架：{bikeSizeLabels[presetKey]}
+        {/* Bottom bar: animation button + info */}
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2">
+          <button
+            onClick={toggleAnimation}
+            title={isAnimating ? '暂停骑行' : '骑行动画'}
+            className={`flex h-9 w-9 items-center justify-center rounded-xl backdrop-blur-md transition-colors cursor-pointer ${
+              isAnimating
+                ? 'bg-emerald-500/80 text-white'
+                : 'bg-white/60 text-foreground shadow-lg ring-1 ring-black/5'
+            }`}
+          >
+            {isAnimating ? (
+              <svg width="12" height="12" viewBox="0 0 10 10"><rect x="0" y="0" width="3.5" height="10" rx="1" fill="currentColor"/><rect x="6.5" y="0" width="3.5" height="10" rx="1" fill="currentColor"/></svg>
+            ) : (
+              <svg width="12" height="12" viewBox="0 0 10 10"><polygon points="1,0 10,5 1,10" fill="currentColor"/></svg>
+            )}
+          </button>
+          <button
+            onClick={toggleHuman}
+            title={showHuman ? '隐藏人物' : '显示人物'}
+            className={`flex h-9 w-9 items-center justify-center rounded-xl backdrop-blur-md transition-colors cursor-pointer ${
+              showHuman
+                ? 'bg-white/60 text-foreground shadow-lg ring-1 ring-black/5'
+                : 'bg-foreground/10 text-muted-foreground ring-1 ring-black/10'
+            }`}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+              {!showHuman && <line x1="2" y1="2" x2="22" y2="22" />}
+            </svg>
+          </button>
+          <div className="pointer-events-none rounded-xl bg-white/60 px-3.5 py-2.5 text-xs font-medium text-foreground backdrop-blur-md">
+            当前姿态：{poseLabels[pose]} | 推荐车架：{bikeSizeLabels[presetKey]}
+          </div>
         </div>
 
         {/* Reload button - bottom right */}

@@ -13,6 +13,9 @@ export interface BikeStore {
   height: number;
   weight: number;
   inseam: number;
+  armScale: number;
+  legScale: number;
+  torsoScl: number;
   // Bike config
   presetKey: PresetKey;
   targetParams: BikeParams;
@@ -22,17 +25,23 @@ export interface BikeStore {
   scene: Scene;
   // Animation
   isAnimating: boolean;
+  showHuman: boolean;
   animAngle: number;
 
   // Actions
   setMeasurements: (h: number, w: number, i: number) => void;
+  setArmScale: (v: number) => void;
+  setLegScale: (v: number) => void;
+  setTorsoScl: (v: number) => void;
   setPresetKey: (key: PresetKey) => void;
   setParam: (key: string, value: number) => void;
   setColor: (key: string, value: string) => void;
   setPose: (pose: Pose) => void;
   setScene: (scene: Scene) => void;
   toggleAnimation: () => void;
+  toggleHuman: () => void;
   resetParams: () => void;
+  resetHumanMeasurements: () => void;
   lerpToTarget: (speed: number) => boolean;
   tickAnimation: (dt: number, rpm: number) => number;
 }
@@ -45,15 +54,26 @@ export const useBikeStore = create<BikeStore>()(
       height: 178,
       weight: 72,
       inseam: 82,
+      armScale: 1.0,
+      legScale: 1.0,
+      torsoScl: 1.0,
       presetKey: 'road',
       targetParams: { ...PRESETS.road },
       currentParams: { ...PRESETS.road },
       pose: 'seated',
       scene: 'city',
       isAnimating: false,
+      showHuman: true,
       animAngle: 0,
 
       setMeasurements: (height, weight, inseam) => set({ height, weight, inseam }),
+      setArmScale: (v) => set({ armScale: v }),
+      setLegScale: (v) => set({ legScale: v }),
+      setTorsoScl: (v) => set({ torsoScl: v }),
+      resetHumanMeasurements: () => set({
+        height: 178, weight: 72, inseam: 82,
+        armScale: 1.0, legScale: 1.0, torsoScl: 1.0,
+      }),
 
       setPresetKey: (key) => {
         const p = { ...PRESETS[key] };
@@ -77,6 +97,7 @@ export const useBikeStore = create<BikeStore>()(
       setScene: (scene) => set({ scene }),
 
       toggleAnimation: () => set((s) => ({ isAnimating: !s.isAnimating })),
+      toggleHuman: () => set((s) => ({ showHuman: !s.showHuman })),
 
       resetParams: () => {
         const key = get().presetKey;

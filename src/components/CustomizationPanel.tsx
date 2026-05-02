@@ -16,8 +16,6 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 export function CustomizationPanel() {
   const targetParams = useBikeStore((s) => s.targetParams);
   const setColor = useBikeStore((s) => s.setColor);
-  const isAnimating = useBikeStore((s) => s.isAnimating);
-  const toggleAnimation = useBikeStore((s) => s.toggleAnimation);
   const resetParams = useBikeStore((s) => s.resetParams);
 
   return (
@@ -58,22 +56,12 @@ export function CustomizationPanel() {
       <div className="rounded-2xl bg-white/70 p-5 shadow-lg ring-1 ring-black/5 backdrop-blur-xl">
         <SectionTitle>衍生数据 Derived</SectionTitle>
         <DerivedPanel />
-        <div className="flex gap-2 mt-3">
-          <button
-            onClick={toggleAnimation}
-            className={`flex-1 rounded-lg px-3 py-2 text-xs font-bold transition-colors ${
-              isAnimating
-                ? 'bg-emerald-500 text-white'
-                : 'bg-primary text-primary-foreground'
-            }`}
-          >
-            {isAnimating ? '暂停动画' : '骑行动画'}
-          </button>
+        <div className="mt-3">
           <button
             onClick={resetParams}
-            className="flex-1 rounded-lg border border-black/10 bg-transparent px-3 py-2 text-xs font-bold text-muted-foreground hover:text-foreground hover:border-black/20 transition-colors"
+            className="w-full rounded-lg border border-black/10 bg-transparent px-3 py-2 text-xs font-bold text-muted-foreground hover:text-foreground hover:border-black/20 transition-colors"
           >
-            重置参数
+            重置自行车数据
           </button>
         </div>
       </div>

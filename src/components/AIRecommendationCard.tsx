@@ -65,7 +65,7 @@ export function AIRecommendationCard() {
   const { height, inseam, weight, presetKey, pose } = useBikeStore();
 
   const { isLoading, error } = useQuery<AIRecommendation>({
-    queryKey: ['aiRecommendation', { height, inseam, weight, bikeType: presetKey, pose }],
+    queryKey: ['aiRecommendation', { bikeType: presetKey, pose }],
     queryFn: async ({ signal }) => {
       // Skip API call in dev — Vercel Edge Function not available locally
       if (import.meta.env.DEV) return fallbackData[pose] ?? fallbackData.seated;

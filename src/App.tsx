@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NavBar } from '@/components/NavBar';
 import { CustomizationPanel } from '@/components/CustomizationPanel';
-import { DataPanel } from '@/components/DataPanel';
 import { Viewport } from '@/components/Viewport';
 import { PoseSwitcher } from '@/components/PoseSwitcher';
 import { BodyInput } from '@/components/BodyInput';
+import { HumanDerivedPanel } from '@/components/HumanDerivedPanel';
 import { PoseAnalysis } from '@/components/PoseAnalysis';
 import { AIRecommendationCard } from '@/components/AIRecommendationCard';
 import { MobileTabBar, type TabKey } from '@/components/MobileTabBar';
@@ -44,24 +44,40 @@ function MobileLayout() {
           </div>
         </div>
 
-        {/* 选车 section */}
-        <div className={activeTab === '选车' ? 'space-y-4' : 'hidden'}>
+        {/* 车辆配置 section */}
+        <div className={activeTab === '车辆配置' ? 'space-y-4' : 'hidden'}>
           <CustomizationPanel />
         </div>
 
-        {/* 数据 section */}
-        <div className={activeTab === '数据' ? 'space-y-4' : 'hidden'}>
-          <BodyInput />
+        {/* 个人数据 section */}
+        <div className={activeTab === '个人数据' ? 'space-y-4' : 'hidden'}>
+          <div className="rounded-2xl bg-white/70 p-5 shadow-lg ring-1 ring-black/5 backdrop-blur-xl">
+            <BodyInput />
+          </div>
+          <div className="rounded-2xl bg-white/70 p-5 shadow-lg ring-1 ring-black/5 backdrop-blur-xl">
+            <HumanDerivedPanel />
+          </div>
           <PoseAnalysis />
           <AIRecommendationCard />
-          <DataPanel />
         </div>
 
-        {/* 个人中心 section */}
-        <div className={activeTab === '个人中心' ? 'space-y-4' : 'hidden'}>
-          <BodyInput />
-          <PoseAnalysis />
-          <AIRecommendationCard />
+        {/* 关于 section */}
+        <div className={activeTab === '关于' ? '' : 'hidden'}>
+          <div className="rounded-2xl bg-white/70 p-6 shadow-lg ring-1 ring-black/5 backdrop-blur-xl text-center">
+            <p className="text-lg font-bold text-foreground">Coasting · 悠骑</p>
+            <p className="text-xs text-muted-foreground mt-1">3D 自行车车架几何配置器</p>
+            <p className="text-xs text-muted-foreground mt-3">
+              完全由 AI (Claude Code) 生成 · MIT 开源
+            </p>
+            <a
+              href="https://github.com/Wshape1/coasting"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block mt-3 text-xs font-medium text-primary hover:underline"
+            >
+              GitHub → Wshape1/coasting
+            </a>
+          </div>
         </div>
       </div>
 
@@ -90,8 +106,12 @@ function TabletLayout() {
           <div className="rounded-2xl bg-white/70 p-5 shadow-lg ring-1 ring-black/5 backdrop-blur-xl">
             <BodyInput />
           </div>
+          <div className="rounded-2xl bg-white/70 p-5 shadow-lg ring-1 ring-black/5 backdrop-blur-xl">
+            <HumanDerivedPanel />
+          </div>
           <PoseAnalysis />
           <AIRecommendationCard />
+          <div id="about-section" />
         </div>
       </div>
     </div>
@@ -130,9 +150,12 @@ function DesktopLayout() {
           <div className="rounded-2xl bg-white/70 p-5 shadow-lg ring-1 ring-black/5 backdrop-blur-xl">
             <BodyInput />
           </div>
+          <div className="rounded-2xl bg-white/70 p-5 shadow-lg ring-1 ring-black/5 backdrop-blur-xl">
+            <HumanDerivedPanel />
+          </div>
           <PoseAnalysis />
           <AIRecommendationCard />
-          <DataPanel />
+          <div id="about-section" />
         </div>
       </div>
     </div>

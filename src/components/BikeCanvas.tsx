@@ -3,9 +3,8 @@ import { Canvas } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 
-const HumanModel = lazy(() =>
-  import('./HumanModel').then((m) => ({ default: m.HumanModel })),
-);
+import { HumanModel } from './HumanModel';
+
 const BikeModel = lazy(() =>
   import('./BikeModel').then((m) => ({ default: m.BikeModel })),
 );
@@ -79,7 +78,9 @@ function SceneContent({ onReady }: { onReady: () => void }) {
       <directionalLight args={['#ffffff', 1.5]} position={[0, 0.3, -3]} />
 
       <Suspense fallback={null}>
-        <HumanModel />
+        <group position={[0, 0.95, 0.15]} rotation={[0, -Math.PI / 2, 0]}>
+          <HumanModel />
+        </group>
         <BikeModel />
         {/* <SimpleGrid /> */}
         <GroundShadow />

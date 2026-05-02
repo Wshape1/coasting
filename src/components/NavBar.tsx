@@ -3,8 +3,7 @@ import { useBikeStore } from '@/store/useBikeStore';
 const navItems: { label: string; section: string }[] = [
   { label: '姿态模拟', section: 'viewport-section' },
   { label: '选车建议', section: 'bike-section' },
-  { label: '模型库', section: 'data-section' },
-  { label: '个人中心', section: 'profile-section' },
+  { label: '关于', section: 'about-section' },
 ];
 
 export function NavBar() {

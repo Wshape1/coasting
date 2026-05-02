@@ -84,6 +84,7 @@ export function BikeModel() {
 
   return (
     <group ref={groupRef} position={[0, 0.35, 0]} rotation={[0, -Math.PI / 2, 0]}>
+      {/* Forward = World +Z, right = -X (local X rotated -π/2 around Y) */}
       <BikeMesh
         pts={pts}
         derived={derived}
