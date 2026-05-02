@@ -27,8 +27,10 @@ export function Viewport() {
   const presetKey = useBikeStore((s) => s.presetKey);
   const isAnimating = useBikeStore((s) => s.isAnimating);
   const showHuman = useBikeStore((s) => s.showHuman);
+  const showDebug = useBikeStore((s) => s.showDebug);
   const toggleAnimation = useBikeStore((s) => s.toggleAnimation);
   const toggleHuman = useBikeStore((s) => s.toggleHuman);
+  const toggleDebug = useBikeStore((s) => s.toggleDebug);
   const [canvasKey, setCanvasKey] = useState(0);
   const [reloadMinMs, setReloadMinMs] = useState(0);
 
@@ -81,6 +83,17 @@ export function Viewport() {
               <circle cx="12" cy="7" r="4" />
               {!showHuman && <line x1="2" y1="2" x2="22" y2="22" />}
             </svg>
+          </button>
+          <button
+            onClick={toggleDebug}
+            title={showDebug ? '隐藏 Debug' : '显示 Debug'}
+            className={`flex h-9 items-center justify-center rounded-xl backdrop-blur-md transition-colors cursor-pointer px-3 text-xs font-mono ${
+              showDebug
+                ? 'bg-amber-400/80 text-amber-900'
+                : 'bg-white/60 text-muted-foreground shadow-lg ring-1 ring-black/5'
+            }`}
+          >
+            {showDebug ? 'DBG' : 'DBG'}
           </button>
           <div className="pointer-events-none rounded-xl bg-white/60 px-3.5 py-2.5 text-xs font-medium text-foreground backdrop-blur-md">
             当前姿态：{poseLabels[pose]} | 推荐车架：{bikeSizeLabels[presetKey]}

@@ -13,7 +13,8 @@ export interface BikeStore {
   height: number;
   weight: number;
   inseam: number;
-  armScale: number;
+  armSpan: number;
+  shoulderWidth: number;
   legScale: number;
   torsoScl: number;
   // Bike config
@@ -26,11 +27,14 @@ export interface BikeStore {
   // Animation
   isAnimating: boolean;
   showHuman: boolean;
+  showDebug: boolean;
   animAngle: number;
 
   // Actions
   setMeasurements: (h: number, w: number, i: number) => void;
-  setArmScale: (v: number) => void;
+  setBodyDims: (h: number, w: number, i: number, a: number, s: number) => void;
+  setArmSpan: (v: number) => void;
+  setShoulderWidth: (v: number) => void;
   setLegScale: (v: number) => void;
   setTorsoScl: (v: number) => void;
   setPresetKey: (key: PresetKey) => void;
@@ -40,6 +44,7 @@ export interface BikeStore {
   setScene: (scene: Scene) => void;
   toggleAnimation: () => void;
   toggleHuman: () => void;
+  toggleDebug: () => void;
   resetParams: () => void;
   resetHumanMeasurements: () => void;
   lerpToTarget: (speed: number) => boolean;
@@ -54,9 +59,10 @@ export const useBikeStore = create<BikeStore>()(
       height: 178,
       weight: 72,
       inseam: 82,
-      armScale: 1.0,
-      legScale: 1.0,
-      torsoScl: 1.0,
+      armSpan: 178,
+      shoulderWidth: 41,
+      legScale: 82 / 178,
+      torsoScl: 1 - 82 / 178,
       presetKey: 'road',
       targetParams: { ...PRESETS.road },
       currentParams: { ...PRESETS.road },
@@ -64,16 +70,38 @@ export const useBikeStore = create<BikeStore>()(
       scene: 'city',
       isAnimating: false,
       showHuman: true,
+      showDebug: false,
       animAngle: 0,
 
-      setMeasurements: (height, weight, inseam) => set({ height, weight, inseam }),
-      setArmScale: (v) => set({ armScale: v }),
-      setLegScale: (v) => set({ legScale: v }),
-      setTorsoScl: (v) => set({ torsoScl: v }),
-      resetHumanMeasurements: () => set({
-        height: 178, weight: 72, inseam: 82,
-        armScale: 1.0, legScale: 1.0, torsoScl: 1.0,
+      setMeasurements: (height, weight, inseam) => {
+        const L = height > 0 ? inseam / height : 0.47;
+        return set({ height, weight, inseam, legScale: L, torsoScl: 1 - L });
+      },
+      setBodyDims: (height, weight, inseam, armSpan, shoulderWidth) => {
+        const L = height > 0 ? inseam / height : 0.47;
+        return set({ height, weight, inseam, armSpan, shoulderWidth, legScale: L, torsoScl: 1 - L });
+      },
+      setArmSpan: (v) => set({ armSpan: v }),
+      setShoulderWidth: (v) => set({ shoulderWidth: v }),
+      // L = legScale ∈ [0.40, 0.618], T = 1 - L ∈ [0.382, 0.60]; C = H × L
+      setLegScale: (L) => set((s) => {
+        const v = Math.min(0.618, Math.max(0.400, L));
+        const newInseam = Math.round(s.height * v);
+        return { legScale: v, torsoScl: 1 - v, inseam: newInseam };
       }),
+      setTorsoScl: (T) => set((s) => {
+        const v = Math.min(0.600, Math.max(0.382, T));
+        const L = 1 - v;
+        const newInseam = Math.round(s.height * L);
+        return { torsoScl: v, legScale: L, inseam: newInseam };
+      }),
+      resetHumanMeasurements: () => {
+        const H = 178, L = 0.618;
+        return set({
+          height: H, weight: 72, inseam: Math.round(H * L),
+          armSpan: H, shoulderWidth: 41, legScale: L, torsoScl: 1 - L,
+        });
+      },
 
       setPresetKey: (key) => {
         const p = { ...PRESETS[key] };
@@ -98,6 +126,7 @@ export const useBikeStore = create<BikeStore>()(
 
       toggleAnimation: () => set((s) => ({ isAnimating: !s.isAnimating })),
       toggleHuman: () => set((s) => ({ showHuman: !s.showHuman })),
+      toggleDebug: () => set((s) => ({ showDebug: !s.showDebug })),
 
       resetParams: () => {
         const key = get().presetKey;
@@ -146,6 +175,10 @@ export const useBikeStore = create<BikeStore>()(
         height: state.height,
         weight: state.weight,
         inseam: state.inseam,
+        armSpan: state.armSpan,
+        shoulderWidth: state.shoulderWidth,
+        legScale: state.legScale,
+        torsoScl: state.torsoScl,
         presetKey: state.presetKey,
         targetParams: state.targetParams,
         pose: state.pose,

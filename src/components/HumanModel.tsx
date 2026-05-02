@@ -3,8 +3,8 @@ import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useBikeStore } from '@/store/useBikeStore'
 import { P_STAND_Q, blendPoseQ, clonePose, JOINT_NAMES } from '@/lib/pose'
-import { solveIK2D, PEDAL_RADIUS, PEDAL_Y_OFFSET, PEDAL_Z_OFFSET } from '@/lib/ik'
 import { mkMat } from '@/lib/helpers'
+import { BikeGeometrySolver } from '@/core/BikeGeometrySolver'
 import type { BoneEntry } from '@/types/human'
 
 // ─── Materials (PBR, matching bike project) ───
@@ -164,26 +164,38 @@ function buildCharacter(hipsBone: THREE.Bone) {
 }
 
 function applyMeasurements(
-  m: { height: number; weight: number; inseam: number; armScale: number; legScale: number; torsoScl: number },
+  m: { height: number; weight: number; inseam: number; armSpan: number; shoulderWidth: number; legScale: number; torsoScl: number },
   hipsBone: THREE.Bone
 ) {
-  const hScl = m.height / 1.70
+  const heightM = m.height
+  const hScl = heightM / 1.70
   const iScl = m.inseam / 0.80
+  // 上半身参考长度 = 身高 - 跨高（参考值 1.70 - 0.80 = 0.90）
+  const upperRef = 1.70 - 0.80
+  const upperScl = (heightM - m.inseam) / upperRef
   hipsBone.position.y = m.inseam + D.ankleH * hScl
 
   // Width scale from weight and height (BMI-based)
-  const expectedWeight = 22.5 * (m.height * m.height)
+  const expectedWeight = 22.5 * (heightM * heightM)
   const wScl = Math.sqrt(m.weight / expectedWeight)
 
+  // Y 缩放：腿长 ∝ 跨高，躯干 ∝ (身高-跨高)
+  // 臂展 → 单臂长 = (臂展 - 肩宽) / 2，参考臂长 0.56m
+  const armLenM = ((m.armSpan - m.shoulderWidth) / 2) / 100;
+  const armScale = Math.max(0.4, armLenM / 0.56);
+
   const scales: Record<string, number> = {
-    torso: m.torsoScl,
-    leg: iScl * m.legScale,
-    arm: m.armScale,
+    torso: upperScl,
+    leg: iScl,
+    arm: armScale,
   }
+
+  // 肩宽 → 躯干 X 缩放（参考肩宽 41cm）
+  const shoulderScale = m.shoulderWidth / 41;
   for (const s of segs) {
-    const sc = (scales[s.group] ?? 1) * hScl
+    const sc = scales[s.group] ?? 1
     s.mesh.scale.y = sc
-    s.mesh.scale.x = wScl
+    s.mesh.scale.x = wScl * (s.group === 'torso' ? shoulderScale : 1)
     s.mesh.scale.z = wScl
     s.bone.position.y = s.baseLen * sc
   }
@@ -192,6 +204,7 @@ function applyMeasurements(
 
 export function HumanModel() {
   const hipsBone = useMemo(() => new THREE.Bone(), [])
+  const groupRef = useRef<THREE.Group>(null)
   const currentQ = useRef(clonePose(P_STAND_Q)).current
   const phaseRef = useRef({ pedal: 0, walk: 0 })
   const tRef = useRef(0)
@@ -200,9 +213,11 @@ export function HumanModel() {
   const height = useBikeStore((s) => s.height)
   const weight = useBikeStore((s) => s.weight)
   const inseam = useBikeStore((s) => s.inseam)
-  const armScale = useBikeStore((s) => s.armScale)
+  const armSpan = useBikeStore((s) => s.armSpan)
+  const shoulderWidth = useBikeStore((s) => s.shoulderWidth)
   const legScale = useBikeStore((s) => s.legScale)
   const torsoScl = useBikeStore((s) => s.torsoScl)
+  const currentParams = useBikeStore((s) => s.currentParams)
   const built = useRef(false)
 
   // Build once
@@ -210,7 +225,7 @@ export function HumanModel() {
     if (built.current) return
     built.current = true
     buildCharacter(hipsBone)
-    applyMeasurements({ height: 1.70, weight: 72, inseam: 0.80, armScale: 1.0, legScale: 1.0, torsoScl: 1.0 }, hipsBone)
+    applyMeasurements({ height: 1.70, weight: 72, inseam: 0.80, armSpan: 170, shoulderWidth: 41, legScale: 1.0, torsoScl: 1.0 }, hipsBone)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -221,52 +236,264 @@ export function HumanModel() {
       height: height / 100,
       weight,
       inseam: inseam / 100,
-      armScale,
+      armSpan,
+      shoulderWidth,
       legScale,
       torsoScl,
     }, hipsBone)
-  }, [height, weight, inseam, armScale, legScale, torsoScl, hipsBone])
+  }, [height, weight, inseam, armSpan, shoulderWidth, legScale, torsoScl, hipsBone])
 
   useFrame((_, dt) => {
     const safeDt = Math.min(dt, 0.1)
     const t = (tRef.current += safeDt)
     const animMode = isAnimating ? 'pedaling' : 'idle' as const
 
+    const shouldLog = false
+    // 调试开关：Math.floor(t) !== lastLogT.current
+
+    // ── 1. 计算车架几何 ──
+    const solver = new BikeGeometrySolver(currentParams)
+    const { pts } = solver.solve()
+
+    // ── 2. 人物定位：臀部靠近坐垫 ──
+    const saddleWorld = new THREE.Vector3(0, 0.35 + pts.spTop.y, pts.spTop.x)
+    const barWorld = new THREE.Vector3(0, 0.35 + pts.stemEnd.y, pts.stemEnd.x)
+    if (groupRef.current) {
+      groupRef.current.position.lerpVectors(saddleWorld, barWorld, 0.1)
+    }
+    // 臀部直接坐到坐垫上（负值下沉）
+    hipsBone.position.set(0, 0.03, 0)
+
+    // 【关键】强制更新骨骼世界矩阵，确保后续 IK 使用的局部坐标正确。
+    // updateWorldMatrix(true, true) = 遍历父级和子级，全部刷新。
+    hipsBone.updateWorldMatrix(true, true)
+
+    // ── 3. 脚踏相位与踏板世界坐标 ──
+    if (animMode === 'pedaling') {
+      phaseRef.current.pedal -= (80 / 60) * Math.PI * 2 * safeDt
+    }
+    const ph = phaseRef.current.pedal
+    const crankLen = (currentParams.crankLength || 172) / 1000
+    const pedalLat = 0.055
+
+    const rPedalWorld = new THREE.Vector3(
+      pedalLat, 0.35 - crankLen * Math.cos(ph), crankLen * Math.sin(ph),
+    )
+    const lPedalWorld = new THREE.Vector3(
+      -pedalLat, 0.35 + crankLen * Math.cos(ph), -crankLen * Math.sin(ph),
+    )
+
+    // ── 4. 获取骨骼长度 ──
+    const lLen = boneByName['lKnee']?.len || D.upperLeg
+    const rLen = boneByName['rKnee']?.len || D.upperLeg
+    const lLen2 = boneByName['lAnkle']?.len || D.lowerLeg
+    const rLen2 = boneByName['rAnkle']?.len || D.lowerLeg
+
+    if (shouldLog) {
+      console.log(`[IK] boneLengths: lLen=${lLen.toFixed(3)} rLen=${rLen.toFixed(3)} lLen2=${lLen2.toFixed(3)} rLen2=${rLen2.toFixed(3)}`)
+      console.log(`[IK] rPedalWorld=(x:${rPedalWorld.x.toFixed(3)},y:${rPedalWorld.y.toFixed(3)},z:${rPedalWorld.z.toFixed(3)})`)
+      console.log(`[IK] lPedalWorld=(x:${lPedalWorld.x.toFixed(3)},y:${lPedalWorld.y.toFixed(3)},z:${lPedalWorld.z.toFixed(3)})`)
+    }
+
+    // ── 5. 开始混合站立姿态（后续 IK 会覆盖腿部关节）──
     blendPoseQ(currentQ, P_STAND_Q, 1 - Math.exp(-5 * safeDt))
 
-    // Apply standing pose to all bones
+    // ── 6. 3D 双骨骼 IK 求解器 ──
+    // 先外展（Z 旋转）让腿的弯曲平面包含目标，再屈伸（X 旋转）让腿踢向目标
+    function solveLegIK3D(
+      hipBone: THREE.Bone | undefined,
+      kneeBone: THREE.Bone | undefined,
+      pedalLocal: THREE.Vector3, // 在 hipsBone 局部空间中
+      upperLen: number,
+      lowerLen: number,
+    ) {
+      if (!hipBone || !kneeBone) return
+
+      // 髋关节在 hipsBone 空间中的位置
+      const hipLocal = hipBone.position.clone()
+      // 脚踏相对髋关节的偏移
+      const rel = new THREE.Vector3().subVectors(pedalLocal, hipLocal)
+
+      const dist = rel.length()
+      const maxLen = upperLen + lowerLen
+      const effDist = Math.min(dist, maxLen * 0.997)
+
+      // --- 步骤 A：外展角（Z 旋转）---
+      const abduct = Math.atan2(rel.x, -rel.y)
+
+      // --- 步骤 B：余弦定理计算弯曲角度 ---
+      const cosKnee = (upperLen * upperLen + lowerLen * lowerLen - effDist * effDist)
+        / (2 * upperLen * lowerLen)
+      const kneeAngle = Math.acos(Math.max(-1, Math.min(1, cosKnee)))
+
+      const cosHip = (upperLen * upperLen + effDist * effDist - lowerLen * lowerLen)
+        / (2 * upperLen * effDist)
+      const hipOffset = Math.acos(Math.max(-1, Math.min(1, cosHip)))
+
+      // --- 步骤 C：统一 IK 配置，膝盖始终朝前弯（靠近车头）---
+      const targetAngle = Math.atan2(-rel.z, -rel.y)
+      const hipAngle = Math.PI + targetAngle + hipOffset
+
+      // 膝盖始终向前弯曲，不切换配置，避免跳变
+      const kneeBend = kneeAngle - Math.PI
+
+      if (shouldLog) {
+        const side = hipLocal.x < 0 ? 'L' : 'R'
+        console.log(`[IK:${side}] rel=(x:${rel.x.toFixed(3)},y:${rel.y.toFixed(3)},z:${rel.z.toFixed(3)})`,
+          `dist=${dist.toFixed(3)} max=${maxLen.toFixed(3)} eff=${effDist.toFixed(3)}`,
+          `upperLen=${upperLen.toFixed(3)} lowerLen=${lowerLen.toFixed(3)}`,
+          `tgt=${(targetAngle*57.3).toFixed(1)}° hip=${(hipAngle*57.3).toFixed(1)}°`,
+          `knee=${(kneeAngle*57.3).toFixed(1)}° kneeBend=${(kneeBend*57.3).toFixed(1)}° abd=${(abduct*57.3).toFixed(1)}°`)
+      }
+
+      hipBone.quaternion.setFromEuler(
+        new THREE.Euler(hipAngle, 0, abduct, 'YXZ'),
+      )
+      kneeBone.quaternion.setFromEuler(
+        new THREE.Euler(kneeBend, 0, 0, 'YXZ'),
+      )
+    }
+
+    // ── 7. 将世界脚踏坐标转为 hipsBone 局部空间 ──
+    // hipsBone.matrixWorld 已经在 updateWorldMatrix 之后是最新的
+    const hipsMatrixInv = new THREE.Matrix4().copy(hipsBone.matrixWorld).invert()
+    const rPedalLocal = rPedalWorld.clone().applyMatrix4(hipsMatrixInv)
+    const lPedalLocal = lPedalWorld.clone().applyMatrix4(hipsMatrixInv)
+
+    // 按 X 符号匹配：lHipLeg 在 -X → 用 X 为负的脚踏；rHipLeg 在 +X → 用 X 为正的脚踏
+    solveLegIK3D(bones.lHipLeg, bones.lKnee,
+      lPedalLocal.x < rPedalLocal.x ? lPedalLocal : rPedalLocal, lLen, lLen2)
+    solveLegIK3D(bones.rHipLeg, bones.rKnee,
+      rPedalLocal.x > lPedalLocal.x ? rPedalLocal : lPedalLocal, rLen, rLen2)
+
+    // ── 8. 非腿部关节使用站立姿态 ──
     for (const name of JOINT_NAMES) {
+      if (name.startsWith('lHip') || name.startsWith('rHip') ||
+          name.startsWith('lKnee') || name.startsWith('rKnee')) continue
       const q = currentQ[name]
       const b = bones[name]
       if (q && b) b.quaternion.copy(q)
     }
 
-    if (animMode === 'pedaling') {
-      phaseRef.current.pedal += Math.PI * 2 * safeDt
-      const ph = phaseRef.current.pedal
-      const lLen = boneByName['lKnee']?.len || D.upperLeg
-      const rLen = boneByName['rKnee']?.len || D.upperLeg
-      const lLen2 = boneByName['lAnkle']?.len || D.lowerLeg
-      const rLen2 = boneByName['rAnkle']?.len || D.lowerLeg
-      const lIK = solveIK2D(
-        PEDAL_Y_OFFSET + Math.cos(ph) * PEDAL_RADIUS,
-        PEDAL_Z_OFFSET + Math.sin(ph) * PEDAL_RADIUS, lLen, lLen2)
-      const rIK = solveIK2D(
-        PEDAL_Y_OFFSET + Math.cos(ph + Math.PI) * PEDAL_RADIUS,
-        PEDAL_Z_OFFSET + Math.sin(ph + Math.PI) * PEDAL_RADIUS, rLen, rLen2)
-      bones.lHipLeg?.quaternion.setFromEuler(new THREE.Euler(lIK.upper, 0, 0.03, 'YXZ'))
-      bones.rHipLeg?.quaternion.setFromEuler(new THREE.Euler(rIK.upper, 0, -0.03, 'YXZ'))
-      bones.lKnee?.quaternion.setFromEuler(new THREE.Euler(lIK.lower, 0, 0, 'YXZ'))
-      bones.rKnee?.quaternion.setFromEuler(new THREE.Euler(rIK.lower, 0, 0, 'YXZ'))
-    } else {
-      // Idle sway
+    // ── 9. 闲时摇摆 ──
+    if (animMode === 'idle') {
       const sw = Math.sin(t * 1.3) * 0.012
       const br = Math.sin(t * 2.1) * 0.008
       bones.lowerTorso?.quaternion.multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(br, 0, sw)))
       bones.head?.quaternion.multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(br * 0.4 + sw * 0.2, 0, 0)))
     }
+
+    // ── 10. 上半身骑行姿态：躯干前倾 + 手臂 IK 握把 ──
+    // 前倾缩小肩-车把距离，使手臂能自然够到车把
+    bones.lowerTorso?.quaternion.multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.75, 0, 0, 'YXZ')))
+    bones.upperTorso?.quaternion.multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.5, 0, 0, 'YXZ')))
+    // step 8-9 修改了骨骼 quaternion，需刷新矩阵
+    hipsBone.updateWorldMatrix(true, true)
+
+    // 手臂 IK：肩→肘→手，目标 = 车把（barWorld 已在 step 2 定义）
+    function solveArmIK(
+      shoulderBone: THREE.Bone | undefined,
+      elbowBone: THREE.Bone | undefined,
+      targetLocal: THREE.Vector3,
+      upperLen: number,
+      lowerLen: number,
+    ) {
+      if (!shoulderBone || !elbowBone) return
+      const shLocal = shoulderBone.position.clone()
+      const rel = new THREE.Vector3().subVectors(targetLocal, shLocal)
+      const dist = rel.length()
+      const maxLen = upperLen + lowerLen
+      const effDist = Math.min(dist, maxLen * 0.997)
+
+      // 外展角：暂设为 0，靠目标位置分开双手
+      const abduct = 0
+      const cosElbow = (upperLen * upperLen + lowerLen * lowerLen - effDist * effDist)
+        / (2 * upperLen * lowerLen)
+      const elbowAngle = Math.acos(Math.max(-1, Math.min(1, cosElbow)))
+      const cosSh = (upperLen * upperLen + effDist * effDist - lowerLen * lowerLen)
+        / (2 * upperLen * effDist)
+      const shOffset = Math.acos(Math.max(-1, Math.min(1, cosSh)))
+      const targetAngle = Math.atan2(-rel.z, -rel.y)
+      const shAngle = Math.PI + targetAngle - shOffset
+
+      const elbowBend = Math.PI - elbowAngle
+
+      if (shouldLog) {
+        const side = shoulderBone === bones.lShoulder ? 'L' : 'R'
+        console.log(`[IK:${side}Arm] rel=(x:${rel.x.toFixed(3)},y:${rel.y.toFixed(3)},z:${rel.z.toFixed(3)})`,
+          `dist=${dist.toFixed(3)} max=${maxLen.toFixed(3)}`,
+          `tgt=${(targetAngle*57.3).toFixed(1)}° off=${(shOffset*57.3).toFixed(1)}° sh=${(shAngle*57.3).toFixed(1)}°`,
+          `elbow=${(elbowAngle*57.3).toFixed(1)}° abd=${(abduct*57.3).toFixed(1)}°`)
+      }
+
+      shoulderBone.quaternion.setFromEuler(new THREE.Euler(shAngle, 0, abduct, 'YXZ'))
+      elbowBone.quaternion.setFromEuler(new THREE.Euler(elbowBend, 0, 0, 'YXZ'))
+    }
+
+    // 获取车把在 upperTorso 局部空间的坐标（肩关节的父级，已含前倾）
+    if (!bones.upperTorso) return
+    const upperTorsoInv = new THREE.Matrix4().copy(bones.upperTorso.matrixWorld).invert()
+    const barUpperLocal = barWorld.clone().applyMatrix4(upperTorsoInv)
+    const lArmLen = boneByName['lElbow']?.len || D.upperArm
+    const rArmLen = boneByName['rElbow']?.len || D.upperArm
+    const lForeLen = boneByName['lHand']?.len || D.lowerArm
+    const rForeLen = boneByName['rHand']?.len || D.lowerArm
+    // 车把宽约 420mm，每侧偏移
+    const gripOffset = 0.28
+
+    solveArmIK(bones.lShoulder, bones.lElbow,
+      new THREE.Vector3(barUpperLocal.x + gripOffset, barUpperLocal.y, barUpperLocal.z), lArmLen, lForeLen)
+    solveArmIK(bones.rShoulder, bones.rElbow,
+      new THREE.Vector3(barUpperLocal.x - gripOffset, barUpperLocal.y, barUpperLocal.z), rArmLen, rForeLen)
   })
 
   if (!showHuman) return null
-  return <primitive object={hipsBone} />
+  return (
+    <>
+      <group ref={groupRef} rotation={[0, Math.PI, 0]}>
+        <primitive object={hipsBone} />
+      </group>
+      <SkeletonDebug />
+    </>
+  )
+}
+
+function SkeletonDebug() {
+  const show = useBikeStore((s) => s.showDebug)
+  const ref = useRef<THREE.Group>(null)
+
+  useFrame(() => {
+    if (!ref.current) return
+    ref.current.visible = show
+    if (!show) return
+
+    const g = ref.current
+    g.clear()
+
+    for (const entry of boneList) {
+      if (!entry.parent) continue
+      const a = new THREE.Vector3()
+      const b = new THREE.Vector3()
+      entry.parent.getWorldPosition(a)
+      entry.bone.getWorldPosition(b)
+      const len = a.distanceTo(b)
+      if (len > 0.001) {
+        const geo = new THREE.BufferGeometry().setFromPoints([a, b])
+        const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: '#ff4444', transparent: true, opacity: 0.8 }))
+        g.add(line)
+        const sp = new THREE.Mesh(new THREE.SphereGeometry(0.006, 6, 6), new THREE.MeshBasicMaterial({ color: '#ff6666' }))
+        sp.position.copy(a)
+        g.add(sp)
+      }
+    }
+    for (const entry of boneList) {
+      const p = new THREE.Vector3()
+      entry.bone.getWorldPosition(p)
+      const sp = new THREE.Mesh(new THREE.SphereGeometry(0.005, 6, 6), new THREE.MeshBasicMaterial({ color: '#ff8888' }))
+      sp.position.copy(p)
+      g.add(sp)
+    }
+  })
+
+  return <group ref={ref} />
 }

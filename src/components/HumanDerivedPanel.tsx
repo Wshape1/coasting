@@ -51,23 +51,33 @@ export function HumanDerivedPanel() {
   const height = useBikeStore((s) => s.height);
   const weight = useBikeStore((s) => s.weight);
   const inseam = useBikeStore((s) => s.inseam);
-  const armScale = useBikeStore((s) => s.armScale);
-  const legScale = useBikeStore((s) => s.legScale);
-  const torsoScl = useBikeStore((s) => s.torsoScl);
+  const armSpan = useBikeStore((s) => s.armSpan);
+  const shoulderWidth = useBikeStore((s) => s.shoulderWidth);
   const resetHumanMeasurements = useBikeStore((s) => s.resetHumanMeasurements);
-  const hScl = height / 170;
   const iScl = inseam / 80;
+  // 上半身随跨高反比缩放（与 applyMeasurements 一致）
+  const upperRef = 170 - 80;
+  const upperScl = (height - inseam) / upperRef;
 
   const bmi = weight / ((height / 100) * (height / 100))
   const widthScl = Math.sqrt(weight / (22.5 * (height / 100) * (height / 100)))
 
+  const L = inseam / (height || 1);
+  const T = 1 - L;
+  const oneArmCm = (armSpan - shoulderWidth) / 2;
+  const armScale3d = oneArmCm / 56; // 参考臂长 56cm
+
   const items = [
     { label: '身形宽', value: widthScl.toFixed(2) },
-    { label: '上臂长', value: `${(D.upperArm * armScale * hScl).toFixed(0)} cm` },
-    { label: '前臂长', value: `${(D.lowerArm * armScale * hScl).toFixed(0)} cm` },
-    { label: '大腿长', value: `${(D.upperLeg * iScl * legScale * hScl).toFixed(0)} cm` },
-    { label: '小腿长', value: `${(D.lowerLeg * iScl * legScale * hScl).toFixed(0)} cm` },
-    { label: '躯干长', value: `${((D.lowTorso + D.upTorso) * torsoScl * hScl).toFixed(0)} cm` },
+    { label: '腿长', value: L.toFixed(3) },
+    { label: '躯干', value: T.toFixed(3) },
+    { label: '臂展', value: `${armSpan} cm` },
+    { label: '肩宽', value: `${shoulderWidth} cm` },
+    { label: '上臂长', value: `${(D.upperArm * armScale3d).toFixed(0)} cm` },
+    { label: '前臂长', value: `${(D.lowerArm * armScale3d).toFixed(0)} cm` },
+    { label: '大腿长', value: `${(D.upperLeg * iScl).toFixed(0)} cm` },
+    { label: '小腿长', value: `${(D.lowerLeg * iScl).toFixed(0)} cm` },
+    { label: '躯干长', value: `${((D.lowTorso + D.upTorso) * upperScl).toFixed(0)} cm` },
   ]
 
   const bmiLabel = bmi < 18.5 ? '偏瘦' : bmi < 24 ? '正常' : bmi < 28 ? '偏重' : '肥胖'

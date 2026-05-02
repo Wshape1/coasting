@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 
 import { HumanModel } from './HumanModel';
+import { DebugHelper } from './DebugHelper';
 
 const BikeModel = lazy(() =>
   import('./BikeModel').then((m) => ({ default: m.BikeModel })),
@@ -78,10 +79,9 @@ function SceneContent({ onReady }: { onReady: () => void }) {
       <directionalLight args={['#ffffff', 1.5]} position={[0, 0.3, -3]} />
 
       <Suspense fallback={null}>
-        <group position={[0, 0.95, 0.15]} rotation={[0, -Math.PI / 2, 0]}>
-          <HumanModel />
-        </group>
+        <HumanModel />
         <BikeModel />
+        <DebugHelper />
         {/* <SimpleGrid /> */}
         <GroundShadow />
         <CameraControls />
