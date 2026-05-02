@@ -14,7 +14,7 @@ export function Viewport() {
   // Refs to avoid React re-renders during slider drag
   const storeVal = useBikeStore.getState().speedMultiplier;
   const closestIdx = SPEED_STEPS.reduce((best, v, i) =>
-    Math.abs(v - storeVal) < Math.abs(SPEED_STEPS[best] - storeVal) ? i : best, 0);
+    Math.abs(v - storeVal) < Math.abs(SPEED_STEPS[best]! - storeVal) ? i : best, 0);
   const stepIndexRef = useRef(closestIdx);
   const sliderRef = useRef<HTMLInputElement>(null);
   const displayRef = useRef<HTMLSpanElement>(null);
@@ -22,9 +22,10 @@ export function Viewport() {
   // Sync slider position and speedRef on mount and when animation starts
   useEffect(() => {
     const idx = stepIndexRef.current;
-    speedRef.current = SPEED_STEPS[idx];
+    const v = SPEED_STEPS[idx] ?? 1.0;
+    speedRef.current = v;
     if (sliderRef.current) sliderRef.current.value = String(idx);
-    if (displayRef.current) displayRef.current.textContent = SPEED_STEPS[idx].toFixed(1) + 'x';
+    if (displayRef.current) displayRef.current.textContent = v.toFixed(1) + 'x';
   }, [isAnimating]);
   const [canvasKey, setCanvasKey] = useState(0);
   const [reloadMinMs, setReloadMinMs] = useState(0);
@@ -71,11 +72,11 @@ export function Viewport() {
                   onInput={(e) => {
                     const idx = parseInt((e.target as HTMLInputElement).value);
                     stepIndexRef.current = idx;
-                    const v = SPEED_STEPS[idx];
+                    const v = SPEED_STEPS[idx] ?? 1.0;
                     speedRef.current = v;
                     if (displayRef.current) displayRef.current.textContent = v.toFixed(1) + 'x';
                   }}
-                  onPointerUp={() => setSpeedMultiplier(SPEED_STEPS[stepIndexRef.current])}
+                  onPointerUp={() => setSpeedMultiplier(SPEED_STEPS[stepIndexRef.current] ?? 1.0)}
                   onClick={(e) => e.stopPropagation()}
                   className="flex-1 h-1 appearance-none bg-white/25 rounded-full outline-none cursor-pointer
                     [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3
