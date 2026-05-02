@@ -43,12 +43,13 @@ Desktop nav items (for scroll-to-section): 姿态模拟 / 选车建议 / 关于.
 
 Single Zustand store with `persist` middleware (localStorage key `coasting-store`):
 
-- **Human body**: height(cm), weight(kg), inseam(cm), armScale, legScale, torsoScl
+- **Human body**: height(cm), weight(kg), inseam(cm), armSpan(cm), shoulderWidth(cm), legScale, torsoScl (L+T=1 formula: legScale + torsoScl = 1)
 - **Bike config**: `targetParams` + `currentParams` (lerp-interpolated per-frame), `presetKey`
 - **Pose & scene**: pose (`seated|sprint|climbing|aero`), scene (`city|mountain|seaside`)
-- **Animation**: `isAnimating`, `showHuman`, `animAngle`
+- **Animation**: `isAnimating`, `showHuman`, `animAngle`, `speedMultiplier` (0.1–3.0, discrete steps, default 1.0)
 - **Geometry lerp**: `lerpToTarget(speed)` interpolates `currentParams` toward `targetParams` every frame. Only `GEO_PARAM_KEYS` are lerped; color params sync instantly.
-- **Persist**: measurement + preset + targetParams + pose + scene survive reload.
+- **Persist**: measurement + preset + targetParams + pose + scene + speedMultiplier survive reload.
+- **speedRef**: Module-level `{ current: number }` in `useBikeStore.ts`. Slider writes directly to `speedRef.current` during drag (no store update, no re-render). `onPointerUp` syncs to store for persistence. BikeModel and HumanModel read `speedRef.current` in `useFrame`.
 
 ### 3D Scene (`src/components/BikeCanvas.tsx`)
 
@@ -70,7 +71,7 @@ No glTF. Full bone hierarchy built from `THREE.Bone` with cylinder/box/icosahedr
 
 - **Bone tree** (17 joints): hips → lowerTorso → upperTorso → head, (left/right) shoulder → elbow → hand, (left/right) hipLeg → knee → ankle → foot. All bone references stored in module-level `bones` / `boneByName` / `boneList` registries.
 - **Pose system** (`src/lib/pose.ts`): Quaternion-only animation. `P_STAND_Q` defines default standing pose as Euler→quaternion. `blendPoseQ` uses `Quaternion.slerp` for smooth transitions. All joint rotations use `.quaternion.copy()`, never `.rotation`.
-- **IK solver** (`src/lib/ik.ts`): 2-bone analytical IK (law of cosines) in 2D sagittal plane. Returns rotation angles for hip/shoulder and knee/elbow. Used for pedaling animation and handlebar reach.
+- **IK solvers**: 3D leg IK and arm IK (both in `HumanModel.tsx` useFrame). Leg IK: 2-bone analytical (law of cosines), alternative config for knee-forward bending, targets pedal world positions. Arm IK: 2-bone analytical, targets handlebar grip positions with handlebar-width-adaptive `gripOffset` and `armSpread` (different formulas for flat vs drop bars). `src/lib/ik.ts` is a legacy 2D solver, currently unused.
 - **Measurement scaling**: `applyMeasurements()` scales mesh Y by height/inseam/proportions, and mesh X/Z by BMI-derived width factor. `hipsBone.position.y = 0` (seated — hips at group origin which is saddle position).
 - **Bike binding**: `useFrame` computes bike geometry via `BikeGeometrySolver(currentParams)` to get saddle/handlebar/BB world positions. Group positioned at saddle. Leg IK targets pedal positions relative to BB. Arm IK targets handlebar positions relative to shoulder.
 
@@ -88,7 +89,7 @@ No glTF. Full bone hierarchy built from `THREE.Bone` with cylinder/box/icosahedr
 ## Key Patterns
 
 - **Geometry params vs color params**: Geometry uses `targetParams → lerp → currentParams` for smooth transitions. Colors set instantly on both.
-- **Direct ref mutation for animation**: Crank/wheel rotation.z mutated directly on refs in `useFrame` — no React state involved per frame.
+- **Direct ref mutation for animation**: Crank/wheel rotation.z mutated directly on refs in `useFrame` — no React state involved per frame. Speed multiplier uses `speedRef` to avoid store-driven re-renders during slider drag.
 - **Module-level caches**: Materials (`_cached`), bone registries (`boneByName`), derived data (`_cachedDerived`) all use module-level state to avoid re-computation across renders.
 - **Throttle geometry rebuilds**: `GEOMETRY_THROTTLE_MS = 120` — prevents GPU overload from rapid slider changes.
 - **Scene cleanup**: SceneSelection is commented out (not deleted), scene label in Viewport is commented out. Both kept for potential future use.
@@ -100,4 +101,4 @@ No glTF. Full bone hierarchy built from `THREE.Bone` with cylinder/box/icosahedr
 - Tablet right panel same.
 - Mobile uses `hidden` class to toggle tab sections (no remounting — preserves 3D scene).
 - Viewport area has NO background color, no border-radius, no shadow (model blends with page).
-- Viewport bottom bar: animation button (icon-only) + human toggle button (icon + slash when hidden) + pose info label + reload button.
+- Viewport bottom bar: animation button (expandable with speed multiplier slider when active) + human toggle button (icon + slash when hidden) + reload button (bottom-right).

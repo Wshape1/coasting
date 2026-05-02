@@ -29,6 +29,7 @@ export interface BikeStore {
   showHuman: boolean;
   showDebug: boolean;
   animAngle: number;
+  speedMultiplier: number;
 
   // Actions
   setMeasurements: (h: number, w: number, i: number) => void;
@@ -42,6 +43,7 @@ export interface BikeStore {
   setColor: (key: string, value: string) => void;
   setPose: (pose: Pose) => void;
   setScene: (scene: Scene) => void;
+  setSpeedMultiplier: (v: number) => void;
   toggleAnimation: () => void;
   toggleHuman: () => void;
   toggleDebug: () => void;
@@ -52,6 +54,10 @@ export interface BikeStore {
 }
 
 const LERP_SPEED = 0.18;
+
+// Shared ref for speed multiplier — updated directly by slider, read in useFrame
+// Avoids store updates during drag to prevent R3F re-render flicker
+export const speedRef = { current: 1 };
 
 export const useBikeStore = create<BikeStore>()(
   persist(
@@ -72,6 +78,7 @@ export const useBikeStore = create<BikeStore>()(
       showHuman: true,
       showDebug: false,
       animAngle: 0,
+      speedMultiplier: 1,
 
       setMeasurements: (height, weight, inseam) => {
         const L = height > 0 ? inseam / height : 0.47;
@@ -83,6 +90,7 @@ export const useBikeStore = create<BikeStore>()(
       },
       setArmSpan: (v) => set({ armSpan: v }),
       setShoulderWidth: (v) => set({ shoulderWidth: v }),
+      setSpeedMultiplier: (v) => set({ speedMultiplier: Math.min(3, Math.max(0.1, v)) }),
       // L = legScale ∈ [0.40, 0.618], T = 1 - L ∈ [0.382, 0.60]; C = H × L
       setLegScale: (L) => set((s) => {
         const v = Math.min(0.618, Math.max(0.400, L));
@@ -183,6 +191,7 @@ export const useBikeStore = create<BikeStore>()(
         targetParams: state.targetParams,
         pose: state.pose,
         scene: state.scene,
+        speedMultiplier: state.speedMultiplier,
       }),
     },
   ),

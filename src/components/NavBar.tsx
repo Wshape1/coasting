@@ -20,6 +20,9 @@ export function NavBar() {
       <span className="text-xl font-bold tracking-tight text-foreground">
         Coasting
       </span>
+      <span className="rounded-full bg-amber-400/80 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-900">
+        In Development
+      </span>
 
       <div className="hidden items-center justify-center gap-8 md:flex" role="menubar">
         {navItems.map((item, i) => (

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
-import { useBikeStore } from '@/store/useBikeStore'
+import { useBikeStore, speedRef } from '@/store/useBikeStore'
 import { P_STAND_Q, blendPoseQ, clonePose, JOINT_NAMES } from '@/lib/pose'
 import { mkMat } from '@/lib/helpers'
 import { BikeGeometrySolver } from '@/core/BikeGeometrySolver'
@@ -72,7 +72,8 @@ function addSegment(
   mat: THREE.Material,
   len: number,
   grp: string,
-  jr = 0
+  jr = 0,
+  jointMat: THREE.Material = M_JOINT,
 ) {
   const m = new THREE.Mesh(geo, mat)
   m.castShadow = true; m.receiveShadow = true
@@ -81,7 +82,7 @@ function addSegment(
   childBone.position.y = len
   parent.add(childBone)
   if (jr > 0) {
-    const jm = new THREE.Mesh(new THREE.IcosahedronGeometry(jr, 1), M_JOINT)
+    const jm = new THREE.Mesh(new THREE.IcosahedronGeometry(jr, 1), jointMat)
     jm.castShadow = true; childBone.add(jm)
   }
   segs.push({ mesh: m, bone: childBone, baseLen: len, group: grp })
@@ -113,9 +114,9 @@ function buildCharacter(hipsBone: THREE.Bone) {
     shBone.position.set(sign * D.shoulderW / 2, -D.upTorso * 0.12, 0)
     ut.bone.add(shBone)
     shBone.rotation.set(Math.PI, 0, sign * (-0.06))
-    const ua = addSegment(shBone, cyl(0.028, 0.024, D.upperArm, 8), M_SKIN, D.upperArm, 'arm', 0.025)
+    const ua = addSegment(shBone, cyl(0.028, 0.024, D.upperArm, 8), M_SKIN, D.upperArm, 'arm', 0.025, M_SKIN)
     const elBone = ua.bone; elBone.rotation.set(0.06, 0, sign * 0.02)
-    const la = addSegment(elBone, cyl(0.024, 0.020, D.lowerArm, 8), M_SKIN, D.lowerArm, 'arm', 0.020)
+    const la = addSegment(elBone, cyl(0.024, 0.020, D.lowerArm, 8), M_SKIN, D.lowerArm, 'arm', 0.020, M_SKIN)
     const handBone = new THREE.Bone()
     handBone.position.y = 0; la.bone.add(handBone)
     handBone.add(new THREE.Mesh(box(0.026, D.hand, 0.022), M_SKIN))
@@ -138,9 +139,9 @@ function buildCharacter(hipsBone: THREE.Bone) {
     const hlBone = new THREE.Bone()
     hlBone.position.set(sign * D.hipW / 2, 0, 0); hipsBone.add(hlBone)
     hlBone.rotation.set(Math.PI, 0, sign * (-0.02))
-    const ul = addSegment(hlBone, cyl(0.042, 0.034, D.upperLeg, 8), M_PANTS, D.upperLeg, 'leg', 0.036)
+    const ul = addSegment(hlBone, cyl(0.042, 0.034, D.upperLeg, 8), M_PANTS, D.upperLeg, 'leg', 0.036, M_PANTS)
     const knBone = ul.bone; knBone.rotation.set(-0.03, 0, 0)
-    const ll = addSegment(knBone, cyl(0.034, 0.026, D.lowerLeg, 8), M_PANTS, D.lowerLeg, 'leg', 0.028)
+    const ll = addSegment(knBone, cyl(0.034, 0.026, D.lowerLeg, 8), M_PANTS, D.lowerLeg, 'leg', 0.028, M_PANTS)
     const footBone = new THREE.Bone()
     footBone.position.y = 0; ll.bone.add(footBone)
     const ftm = new THREE.Mesh(box(0.034, D.ankleH, 0.09), M_SHOE)
@@ -270,7 +271,7 @@ export function HumanModel() {
 
     // ── 3. 脚踏相位与踏板世界坐标 ──
     if (animMode === 'pedaling') {
-      phaseRef.current.pedal -= (80 / 60) * Math.PI * 2 * safeDt
+      phaseRef.current.pedal -= (80 * speedRef.current / 60) * Math.PI * 2 * safeDt
     }
     const ph = phaseRef.current.pedal
     const crankLen = (currentParams.crankLength || 172) / 1000
@@ -397,6 +398,7 @@ export function HumanModel() {
       targetLocal: THREE.Vector3,
       upperLen: number,
       lowerLen: number,
+      spreadAngle: number, // 肩关节外展角（Z 旋转），让手臂往两侧张开
     ) {
       if (!shoulderBone || !elbowBone) return
       const shLocal = shoulderBone.position.clone()
@@ -405,8 +407,6 @@ export function HumanModel() {
       const maxLen = upperLen + lowerLen
       const effDist = Math.min(dist, maxLen * 0.997)
 
-      // 外展角：暂设为 0，靠目标位置分开双手
-      const abduct = 0
       const cosElbow = (upperLen * upperLen + lowerLen * lowerLen - effDist * effDist)
         / (2 * upperLen * lowerLen)
       const elbowAngle = Math.acos(Math.max(-1, Math.min(1, cosElbow)))
@@ -423,10 +423,10 @@ export function HumanModel() {
         console.log(`[IK:${side}Arm] rel=(x:${rel.x.toFixed(3)},y:${rel.y.toFixed(3)},z:${rel.z.toFixed(3)})`,
           `dist=${dist.toFixed(3)} max=${maxLen.toFixed(3)}`,
           `tgt=${(targetAngle*57.3).toFixed(1)}° off=${(shOffset*57.3).toFixed(1)}° sh=${(shAngle*57.3).toFixed(1)}°`,
-          `elbow=${(elbowAngle*57.3).toFixed(1)}° abd=${(abduct*57.3).toFixed(1)}°`)
+          `elbow=${(elbowAngle*57.3).toFixed(1)}° spread=${(spreadAngle*57.3).toFixed(1)}°`)
       }
 
-      shoulderBone.quaternion.setFromEuler(new THREE.Euler(shAngle, 0, abduct, 'YXZ'))
+      shoulderBone.quaternion.setFromEuler(new THREE.Euler(shAngle, 0, spreadAngle, 'YXZ'))
       elbowBone.quaternion.setFromEuler(new THREE.Euler(elbowBend, 0, 0, 'YXZ'))
     }
 
@@ -438,13 +438,19 @@ export function HumanModel() {
     const rArmLen = boneByName['rElbow']?.len || D.upperArm
     const lForeLen = boneByName['lHand']?.len || D.lowerArm
     const rForeLen = boneByName['rHand']?.len || D.lowerArm
-    // 车把宽约 420mm，每侧偏移
-    const gripOffset = 0.28
+    // 握把位置：按车把类型（flat/drop）分别适配
+    const barWidthM = (currentParams.handlebarWidth || 420) / 1000
+    const isFlat = currentParams.barStyle === 'flat'
+    const gripOffset = isFlat ? barWidthM / 2 * 0.82 : barWidthM / 2
+    const armSpread = isFlat
+      ? Math.min(0.50, 0.14 * (barWidthM / 0.42))
+      : Math.min(0.55, 0.15 * (barWidthM / 0.42))
+    const gripLift = isFlat ? 0.04 : 0.02
 
     solveArmIK(bones.lShoulder, bones.lElbow,
-      new THREE.Vector3(barUpperLocal.x + gripOffset, barUpperLocal.y, barUpperLocal.z), lArmLen, lForeLen)
+      new THREE.Vector3(barUpperLocal.x + gripOffset, barUpperLocal.y + gripLift, barUpperLocal.z), lArmLen, lForeLen, armSpread)
     solveArmIK(bones.rShoulder, bones.rElbow,
-      new THREE.Vector3(barUpperLocal.x - gripOffset, barUpperLocal.y, barUpperLocal.z), rArmLen, rForeLen)
+      new THREE.Vector3(barUpperLocal.x - gripOffset, barUpperLocal.y + gripLift, barUpperLocal.z), rArmLen, rForeLen, -armSpread)
   })
 
   if (!showHuman) return null

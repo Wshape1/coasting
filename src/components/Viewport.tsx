@@ -1,36 +1,31 @@
-import { useState, useCallback } from 'react';
-import { useBikeStore, type Pose, /* type Scene, */ type PresetKey } from '@/store/useBikeStore';
+import { useState, useCallback, useRef, useEffect } from 'react';
+import { useBikeStore, speedRef } from '@/store/useBikeStore';
 import { BikeCanvas } from './BikeCanvas';
 
-// const sceneLabels: Record<Scene, string> = {
-//   city: '城市 City',
-//   mountain: '山地 MTB Park',
-//   seaside: '海边 Seaside',
-// };
-
-const poseLabels: Record<Pose, string> = {
-  seated: '坐姿骑行',
-  sprint: '冲刺姿态',
-  climbing: '站立爬坡',
-  aero: '低风阻姿态',
-};
-
-const bikeSizeLabels: Record<PresetKey, string> = {
-  road: 'S 码',
-  mountain: 'M 码',
-  commuter: 'S 码',
-};
+const SPEED_STEPS = [0.1, 0.3, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.25, 2.5, 2.75, 3.0];
 
 export function Viewport() {
-  const pose = useBikeStore((s) => s.pose);
-  // const scene = useBikeStore((s) => s.scene);
-  const presetKey = useBikeStore((s) => s.presetKey);
   const isAnimating = useBikeStore((s) => s.isAnimating);
   const showHuman = useBikeStore((s) => s.showHuman);
-  const showDebug = useBikeStore((s) => s.showDebug);
   const toggleAnimation = useBikeStore((s) => s.toggleAnimation);
   const toggleHuman = useBikeStore((s) => s.toggleHuman);
-  const toggleDebug = useBikeStore((s) => s.toggleDebug);
+  const setSpeedMultiplier = useBikeStore((s) => s.setSpeedMultiplier);
+
+  // Refs to avoid React re-renders during slider drag
+  const storeVal = useBikeStore.getState().speedMultiplier;
+  const closestIdx = SPEED_STEPS.reduce((best, v, i) =>
+    Math.abs(v - storeVal) < Math.abs(SPEED_STEPS[best] - storeVal) ? i : best, 0);
+  const stepIndexRef = useRef(closestIdx);
+  const sliderRef = useRef<HTMLInputElement>(null);
+  const displayRef = useRef<HTMLSpanElement>(null);
+
+  // Sync slider position and speedRef on mount and when animation starts
+  useEffect(() => {
+    const idx = stepIndexRef.current;
+    speedRef.current = SPEED_STEPS[idx];
+    if (sliderRef.current) sliderRef.current.value = String(idx);
+    if (displayRef.current) displayRef.current.textContent = SPEED_STEPS[idx].toFixed(1) + 'x';
+  }, [isAnimating]);
   const [canvasKey, setCanvasKey] = useState(0);
   const [reloadMinMs, setReloadMinMs] = useState(0);
 
@@ -57,14 +52,40 @@ export function Viewport() {
           <button
             onClick={toggleAnimation}
             title={isAnimating ? '暂停骑行' : '骑行动画'}
-            className={`flex h-9 w-9 items-center justify-center rounded-xl backdrop-blur-md transition-colors cursor-pointer ${
+            className={`flex h-9 items-center justify-center rounded-xl backdrop-blur-md cursor-pointer transition-all duration-500 ease-in-out overflow-hidden ${
               isAnimating
-                ? 'bg-emerald-500/80 text-white'
-                : 'bg-white/60 text-foreground shadow-lg ring-1 ring-black/5'
+                ? 'w-58 bg-primary text-primary-foreground gap-2 px-2'
+                : 'w-9 bg-white/60 text-foreground shadow-lg ring-1 ring-black/5'
             }`}
           >
             {isAnimating ? (
-              <svg width="12" height="12" viewBox="0 0 10 10"><rect x="0" y="0" width="3.5" height="10" rx="1" fill="currentColor"/><rect x="6.5" y="0" width="3.5" height="10" rx="1" fill="currentColor"/></svg>
+              <>
+                <svg width="12" height="12" viewBox="0 0 10 10" className="shrink-0"><rect x="0" y="0" width="3.5" height="10" rx="1" fill="currentColor"/><rect x="6.5" y="0" width="3.5" height="10" rx="1" fill="currentColor"/></svg>
+                <input
+                  ref={sliderRef}
+                  type="range"
+                  min={0}
+                  max={SPEED_STEPS.length - 1}
+                  step={1}
+                  defaultValue={stepIndexRef.current}
+                  onInput={(e) => {
+                    const idx = parseInt((e.target as HTMLInputElement).value);
+                    stepIndexRef.current = idx;
+                    const v = SPEED_STEPS[idx];
+                    speedRef.current = v;
+                    if (displayRef.current) displayRef.current.textContent = v.toFixed(1) + 'x';
+                  }}
+                  onPointerUp={() => setSpeedMultiplier(SPEED_STEPS[stepIndexRef.current])}
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex-1 h-1 appearance-none bg-white/25 rounded-full outline-none cursor-pointer
+                    [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3
+                    [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white
+                    [&::-webkit-slider-thumb]:shadow-sm [&::-webkit-slider-thumb]:cursor-pointer"
+                />
+                <span ref={displayRef} className="shrink-0 text-[10px] font-mono font-bold tabular-nums w-8 text-right">
+                  1.0x
+                </span>
+              </>
             ) : (
               <svg width="12" height="12" viewBox="0 0 10 10"><polygon points="1,0 10,5 1,10" fill="currentColor"/></svg>
             )}
@@ -84,20 +105,6 @@ export function Viewport() {
               {!showHuman && <line x1="2" y1="2" x2="22" y2="22" />}
             </svg>
           </button>
-          <button
-            onClick={toggleDebug}
-            title={showDebug ? '隐藏 Debug' : '显示 Debug'}
-            className={`flex h-9 items-center justify-center rounded-xl backdrop-blur-md transition-colors cursor-pointer px-3 text-xs font-mono ${
-              showDebug
-                ? 'bg-amber-400/80 text-amber-900'
-                : 'bg-white/60 text-muted-foreground shadow-lg ring-1 ring-black/5'
-            }`}
-          >
-            {showDebug ? 'DBG' : 'DBG'}
-          </button>
-          <div className="pointer-events-none rounded-xl bg-white/60 px-3.5 py-2.5 text-xs font-medium text-foreground backdrop-blur-md">
-            当前姿态：{poseLabels[pose]} | 推荐车架：{bikeSizeLabels[presetKey]}
-          </div>
         </div>
 
         {/* Reload button - bottom right */}

@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { useBikeStore } from '@/store/useBikeStore';
+import { useBikeStore, speedRef } from '@/store/useBikeStore';
 import { BikeGeometrySolver } from '@/core/BikeGeometrySolver';
 import { createMaterials } from '@/lib/materials';
 import { GEO_PARAM_KEYS, PRESETS } from '@/config/presets';
@@ -55,7 +55,7 @@ export function BikeModel() {
 
     // Animate crank + wheels via direct ref mutation
     if (store.isAnimating) {
-      const newAngle = store.tickAnimation(dt, 80);
+      const newAngle = store.tickAnimation(dt, 80 * speedRef.current);
       if (crankRef.current) crankRef.current.rotation.z = -newAngle;
       const wr = -newAngle * 2.5;
       if (rearWheelRef.current) rearWheelRef.current.rotation.z = wr;
