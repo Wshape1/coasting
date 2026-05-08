@@ -1,18 +1,15 @@
 import { useBikeStore } from '@/store/useBikeStore';
 
-const navItems: { label: string; section: string }[] = [
-  { label: '姿态模拟', section: 'viewport-section' },
-  { label: '关于', section: 'about-section' },
-];
+export type NavPage = 'pose' | 'about';
 
-export function NavBar() {
+interface NavBarProps {
+  activePage: NavPage;
+  onNavigate: (page: NavPage) => void;
+}
+
+export function NavBar({ activePage, onNavigate }: NavBarProps) {
   const { height } = useBikeStore();
   const initial = 'U';
-
-  const scrollTo = (sectionId: string) => {
-    const el = document.getElementById(sectionId);
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
 
   return (
     <nav className="flex h-14 items-center gap-4 rounded-full bg-white/60 px-5 shadow-lg ring-1 ring-black/5 backdrop-blur-xl md:w-auto md:gap-6 md:rounded-2xl md:px-6 w-[90vw]" aria-label="主导航">
@@ -24,21 +21,30 @@ export function NavBar() {
       </span>
 
       <div className="hidden items-center justify-center gap-8 md:flex" role="menubar">
-        {navItems.map((item, i) => (
-          <button
-            key={item.label}
-            role="menuitem"
-            aria-current={i === 0 ? 'page' : undefined}
-            onClick={() => scrollTo(item.section)}
-            className={`text-sm transition-colors ${
-              i === 0
-                ? 'font-medium text-foreground'
-                : 'font-normal text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            {item.label}
-          </button>
-        ))}
+        <button
+          role="menuitem"
+          aria-current={activePage === 'pose' ? 'page' : undefined}
+          onClick={() => onNavigate('pose')}
+          className={`text-sm transition-colors ${
+            activePage === 'pose'
+              ? 'font-medium text-foreground'
+              : 'font-normal text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          姿态模拟
+        </button>
+        <button
+          role="menuitem"
+          aria-current={activePage === 'about' ? 'page' : undefined}
+          onClick={() => onNavigate('about')}
+          className={`text-sm transition-colors ${
+            activePage === 'about'
+              ? 'font-medium text-foreground'
+              : 'font-normal text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          关于
+        </button>
       </div>
 
       <div className="ml-auto flex items-center gap-3">

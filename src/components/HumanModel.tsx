@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
-import { useBikeStore, speedRef } from '@/store/useBikeStore'
+import { useBikeStore } from '@/store/useBikeStore'
 import { P_STAND_Q, POSE_MAP, blendPoseQ, clonePose, JOINT_NAMES } from '@/lib/pose'
 import { mkMat } from '@/lib/helpers'
 import { BikeGeometrySolver } from '@/core/BikeGeometrySolver'
@@ -207,9 +207,9 @@ export function HumanModel() {
   const hipsBone = useMemo(() => new THREE.Bone(), [])
   const groupRef = useRef<THREE.Group>(null)
   const currentQ = useRef(clonePose(P_STAND_Q)).current
-  const phaseRef = useRef({ pedal: 0, walk: 0 })
   const tRef = useRef(0)
   const isAnimating = useBikeStore((s) => s.isAnimating)
+  const animAngle = useBikeStore((s) => s.animAngle)
   const showHuman = useBikeStore((s) => s.showHuman)
   const pose = useBikeStore((s) => s.pose)
   const height = useBikeStore((s) => s.height)
@@ -272,14 +272,10 @@ export function HumanModel() {
         groupRef.current.position.set(bbWorld.x, hipY, bbWorld.z)
         hipsBone.position.set(0, 0.05, 0)
       } else if (pose === 'sprint') {
-        // 冲刺：站立但臀部向后靠近坐垫，高度比爬坡略高
-        const crankLen = (currentParams.crankLength || 172) / 1000
-        const pedalLowestY = 0.35 - crankLen
-        const legLen = 0.85
-        const hipY = pedalLowestY + legLen * 0.98 // 接近爬坡高度
-        // 臀部向坐垫方向偏移更多（Z方向靠近坐垫）
-        const hipZ = saddleWorld.z * 0.6 // 向坐垫偏移 60%
-        groupRef.current.position.set(bbWorld.x, hipY, hipZ)
+        // 冲刺：臀部跟随坐垫位置，站立时在坐垫基础上抬高并前移
+        const standOffsetY = -0.03 // 向上偏移（升高0.02）
+        const standOffsetZ = 0.08 // 向车头方向前移
+        groupRef.current.position.set(saddleWorld.x, saddleWorld.y + standOffsetY, saddleWorld.z + standOffsetZ)
         hipsBone.position.set(0, 0.05, 0)
       } else {
         groupRef.current.position.lerpVectors(saddleWorld, barWorld, 0.1)
@@ -292,10 +288,8 @@ export function HumanModel() {
     hipsBone.updateWorldMatrix(true, true)
 
     // ── 3. 脚踏相位与踏板世界坐标 ──
-    if (animMode === 'pedaling') {
-      phaseRef.current.pedal -= (80 * speedRef.current / 60) * Math.PI * 2 * safeDt
-    }
-    const ph = phaseRef.current.pedal
+    // 使用 store 中的 animAngle 确保与 BikeModel 同步
+    const ph = -animAngle
     const crankLen = (currentParams.crankLength || 172) / 1000
     const pedalLat = 0.055
 

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { NavBar } from '@/components/NavBar';
+import { NavBar, type NavPage } from '@/components/NavBar';
 import { CustomizationPanel } from '@/components/CustomizationPanel';
 import { Viewport } from '@/components/Viewport';
 import { PoseSwitcher } from '@/components/PoseSwitcher';
@@ -19,6 +19,29 @@ const queryClient = new QueryClient({
   },
 });
 
+function AboutPage() {
+  return (
+    <div className="flex flex-col items-center justify-center h-full">
+      <div className="rounded-2xl bg-white/70 p-8 shadow-lg ring-1 ring-black/5 backdrop-blur-xl text-center max-w-md">
+        <p className="text-2xl font-bold text-foreground">Coasting · 悠骑</p>
+        <p className="text-sm text-muted-foreground mt-2">3D 自行车车架几何配置器</p>
+        <div className="mt-6 space-y-3 text-sm text-muted-foreground">
+          <p>完全由 AI (Claude Code) 生成</p>
+          <p>MIT 开源协议</p>
+        </div>
+        <a
+          href="https://github.com/Wshape1/coasting"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-block mt-6 text-sm font-medium text-primary hover:underline"
+        >
+          GitHub → Wshape1/coasting
+        </a>
+      </div>
+    </div>
+  );
+}
+
 function MobileLayout() {
   const [activeTab, setActiveTab] = useState<TabKey>('姿态模拟');
 
@@ -26,7 +49,7 @@ function MobileLayout() {
     <div className="flex h-dvh flex-col bg-background">
       {/* Mobile top bar — floating island */}
       <div className="fixed top-3 left-1/2 z-50 -translate-x-1/2">
-        <NavBar />
+        <NavBar activePage="pose" onNavigate={() => {}} />
       </div>
 
       {/* Scrollable content */}
@@ -88,75 +111,89 @@ function MobileLayout() {
 }
 
 function TabletLayout() {
+  const [activePage, setActivePage] = useState<NavPage>('pose');
+
   return (
     <div className="flex h-dvh flex-col bg-background p-4">
-      <NavBar />
+      <NavBar activePage={activePage} onNavigate={setActivePage} />
       <div className="mt-4 flex flex-1 gap-4 overflow-hidden">
-        {/* Left: Viewport + PoseSwitcher */}
-        <div className="flex min-w-0 flex-1 flex-col gap-4 pb-4">
-          <Viewport />
-          <div className="flex justify-center">
-            <PoseSwitcher />
-          </div>
-        </div>
+        {activePage === 'about' ? (
+          <AboutPage />
+        ) : (
+          <>
+            {/* Left: Viewport + PoseSwitcher */}
+            <div className="flex min-w-0 flex-1 flex-col gap-4 pb-4">
+              <Viewport />
+              <div className="flex justify-center">
+                <PoseSwitcher />
+              </div>
+            </div>
 
-        {/* Right panel - scrollable */}
-        <div className="flex w-[320px] shrink-0 flex-col gap-4 overflow-y-auto scrollbar-none pb-2">
-          <CustomizationPanel />
-          <div className="rounded-2xl bg-white/70 p-5 shadow-lg ring-1 ring-black/5 backdrop-blur-xl">
-            <BodyInput />
-          </div>
-          <div className="rounded-2xl bg-white/70 p-5 shadow-lg ring-1 ring-black/5 backdrop-blur-xl">
-            <HumanDerivedPanel />
-          </div>
-          <PoseAnalysis />
-          <AIRecommendationCard />
-          <div id="about-section" />
-        </div>
+            {/* Right panel - scrollable */}
+            <div className="flex w-[320px] shrink-0 flex-col gap-4 overflow-y-auto scrollbar-none pb-2">
+              <CustomizationPanel />
+              <div className="rounded-2xl bg-white/70 p-5 shadow-lg ring-1 ring-black/5 backdrop-blur-xl">
+                <BodyInput />
+              </div>
+              <div className="rounded-2xl bg-white/70 p-5 shadow-lg ring-1 ring-black/5 backdrop-blur-xl">
+                <HumanDerivedPanel />
+              </div>
+              <PoseAnalysis />
+              <AIRecommendationCard />
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
 }
 
 function DesktopLayout() {
+  const [activePage, setActivePage] = useState<NavPage>('pose');
+
   return (
     <div className="flex h-dvh flex-col bg-background p-4">
-      <NavBar />
+      <NavBar activePage={activePage} onNavigate={setActivePage} />
       <div className="mt-4 flex flex-1 gap-6 overflow-hidden">
-        {/* Left column — 自定义面板 */}
-        <div
-          id="bike-section"
-          className="flex w-[300px] shrink-0 flex-col gap-4 overflow-y-auto scrollbar-none pb-2"
-        >
-          <CustomizationPanel />
-        </div>
+        {activePage === 'about' ? (
+          <AboutPage />
+        ) : (
+          <>
+            {/* Left column — 自定义面板 */}
+            <div
+              id="bike-section"
+              className="flex w-[300px] shrink-0 flex-col gap-4 overflow-y-auto scrollbar-none pb-2"
+            >
+              <CustomizationPanel />
+            </div>
 
-        {/* Center column — 姿态模拟 */}
-        <div
-          id="viewport-section"
-          className="flex min-w-0 flex-1 flex-col gap-4 pb-6"
-        >
-          <Viewport />
-          <div className="flex justify-center">
-            <PoseSwitcher />
-          </div>
-        </div>
+            {/* Center column — 姿态模拟 */}
+            <div
+              id="viewport-section"
+              className="flex min-w-0 flex-1 flex-col gap-4 pb-6"
+            >
+              <Viewport />
+              <div className="flex justify-center">
+                <PoseSwitcher />
+              </div>
+            </div>
 
-        {/* Right column — 数据/个人中心 */}
-        <div
-          id="data-section"
-          className="flex w-[320px] shrink-0 flex-col gap-3 overflow-y-auto scrollbar-none pb-2"
-        >
-          <div className="rounded-2xl bg-white/70 p-5 shadow-lg ring-1 ring-black/5 backdrop-blur-xl">
-            <BodyInput />
-          </div>
-          <div className="rounded-2xl bg-white/70 p-5 shadow-lg ring-1 ring-black/5 backdrop-blur-xl">
-            <HumanDerivedPanel />
-          </div>
-          <PoseAnalysis />
-          <AIRecommendationCard />
-          <div id="about-section" />
-        </div>
+            {/* Right column — 数据/个人中心 */}
+            <div
+              id="data-section"
+              className="flex w-[320px] shrink-0 flex-col gap-3 overflow-y-auto scrollbar-none pb-2"
+            >
+              <div className="rounded-2xl bg-white/70 p-5 shadow-lg ring-1 ring-black/5 backdrop-blur-xl">
+                <BodyInput />
+              </div>
+              <div className="rounded-2xl bg-white/70 p-5 shadow-lg ring-1 ring-black/5 backdrop-blur-xl">
+                <HumanDerivedPanel />
+              </div>
+              <PoseAnalysis />
+              <AIRecommendationCard />
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
