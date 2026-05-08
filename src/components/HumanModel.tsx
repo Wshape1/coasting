@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useBikeStore, speedRef } from '@/store/useBikeStore'
-import { P_STAND_Q, blendPoseQ, clonePose, JOINT_NAMES } from '@/lib/pose'
+import { P_STAND_Q, POSE_MAP, blendPoseQ, clonePose, JOINT_NAMES } from '@/lib/pose'
 import { mkMat } from '@/lib/helpers'
 import { BikeGeometrySolver } from '@/core/BikeGeometrySolver'
 import type { BoneEntry } from '@/types/human'
@@ -211,6 +211,7 @@ export function HumanModel() {
   const tRef = useRef(0)
   const isAnimating = useBikeStore((s) => s.isAnimating)
   const showHuman = useBikeStore((s) => s.showHuman)
+  const pose = useBikeStore((s) => s.pose)
   const height = useBikeStore((s) => s.height)
   const weight = useBikeStore((s) => s.weight)
   const inseam = useBikeStore((s) => s.inseam)
@@ -259,11 +260,32 @@ export function HumanModel() {
     // ── 2. 人物定位：臀部靠近坐垫 ──
     const saddleWorld = new THREE.Vector3(0, 0.35 + pts.spTop.y, pts.spTop.x)
     const barWorld = new THREE.Vector3(0, 0.35 + pts.stemEnd.y, pts.stemEnd.x)
+    const bbWorld = new THREE.Vector3(0, 0.35, 0) // 中轴位置
+
     if (groupRef.current) {
-      groupRef.current.position.lerpVectors(saddleWorld, barWorld, 0.1)
+      if (pose === 'climbing') {
+        // 站立爬坡：臀部在中轴正上方，高度以刚好踩到脚踏最低点为准
+        const crankLen = (currentParams.crankLength || 172) / 1000
+        const pedalLowestY = 0.35 - crankLen // 脚踏最低点 Y
+        const legLen = 0.85 // 腿长参考值
+        const hipY = pedalLowestY + legLen // 臀部高度 = 脚踏最低点 + 腿长
+        groupRef.current.position.set(bbWorld.x, hipY, bbWorld.z)
+        hipsBone.position.set(0, 0.05, 0)
+      } else if (pose === 'sprint') {
+        // 冲刺：站立但臀部向后靠近坐垫，高度比爬坡略高
+        const crankLen = (currentParams.crankLength || 172) / 1000
+        const pedalLowestY = 0.35 - crankLen
+        const legLen = 0.85
+        const hipY = pedalLowestY + legLen * 0.98 // 接近爬坡高度
+        // 臀部向坐垫方向偏移更多（Z方向靠近坐垫）
+        const hipZ = saddleWorld.z * 0.6 // 向坐垫偏移 60%
+        groupRef.current.position.set(bbWorld.x, hipY, hipZ)
+        hipsBone.position.set(0, 0.05, 0)
+      } else {
+        groupRef.current.position.lerpVectors(saddleWorld, barWorld, 0.1)
+        hipsBone.position.set(0, 0.03, 0)
+      }
     }
-    // 臀部直接坐到坐垫上（负值下沉）
-    hipsBone.position.set(0, 0.03, 0)
 
     // 【关键】强制更新骨骼世界矩阵，确保后续 IK 使用的局部坐标正确。
     // updateWorldMatrix(true, true) = 遍历父级和子级，全部刷新。
@@ -296,8 +318,9 @@ export function HumanModel() {
       console.log(`[IK] lPedalWorld=(x:${lPedalWorld.x.toFixed(3)},y:${lPedalWorld.y.toFixed(3)},z:${lPedalWorld.z.toFixed(3)})`)
     }
 
-    // ── 5. 开始混合站立姿态（后续 IK 会覆盖腿部关节）──
-    blendPoseQ(currentQ, P_STAND_Q, 1 - Math.exp(-5 * safeDt))
+    // ── 5. 混合到目标姿态（后续 IK 会覆盖腿部关节）──
+    const targetPose = POSE_MAP[pose] || P_STAND_Q
+    blendPoseQ(currentQ, targetPose, 1 - Math.exp(-5 * safeDt))
 
     // ── 6. 3D 双骨骼 IK 求解器 ──
     // 先外展（Z 旋转）让腿的弯曲平面包含目标，再屈伸（X 旋转）让腿踢向目标
@@ -385,9 +408,17 @@ export function HumanModel() {
     }
 
     // ── 10. 上半身骑行姿态：躯干前倾 + 手臂 IK 握把 ──
-    // 前倾缩小肩-车把距离，使手臂能自然够到车把
-    bones.lowerTorso?.quaternion.multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.75, 0, 0, 'YXZ')))
-    bones.upperTorso?.quaternion.multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.5, 0, 0, 'YXZ')))
+    // 前倾角度根据姿态调整（弧度，负值=前倾）
+    const torsoLean = pose === 'aero' ? -1.80   // 低风阻：极度前倾，背部接近水平
+      : pose === 'sprint' ? -1.20   // 冲刺：站立，躯干大幅前倾
+      : pose === 'climbing' ? -0.20  // 爬坡：站立，略微前倾
+      : -0.75
+    const upperLean = pose === 'aero' ? -1.50   // 低风阻：上半身更平
+      : pose === 'sprint' ? -0.90   // 冲刺：上半身大幅前倾
+      : pose === 'climbing' ? -0.15  // 爬坡：上半身略微前倾
+      : -0.50
+    bones.lowerTorso?.quaternion.multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(torsoLean, 0, 0, 'YXZ')))
+    bones.upperTorso?.quaternion.multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(upperLean, 0, 0, 'YXZ')))
     // step 8-9 修改了骨骼 quaternion，需刷新矩阵
     hipsBone.updateWorldMatrix(true, true)
 
